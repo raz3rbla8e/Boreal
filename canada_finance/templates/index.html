@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CanadaFinance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo"><span class="logo-icon">🍁</span>CanadaFinance</div>
+
+  <span class="nav-label">Views</span>
+  <button class="nav-btn active" onclick="nav('dashboard')">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+    Dashboard
+  </button>
+  <button class="nav-btn" onclick="nav('transactions')">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+    Transactions
+  </button>
+  <button class="nav-btn" onclick="nav('year')">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+    Year Review
+  </button>
+  <button class="nav-btn" onclick="nav('import')">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+    Import CSV
+  </button>
+  <button class="nav-btn" onclick="nav('settings')">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+    Settings
+  </button>
+
+  <span class="nav-label">Actions</span>
+  <button class="nav-btn" onclick="openAddModal()">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+    Add Transaction
+  </button>
+  <button class="nav-btn" onclick="exportCSV(false)">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Export Month
+  </button>
+  <button class="nav-btn" onclick="exportCSV(true)">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    Export All
+  </button>
+
+  <div class="sidebar-bottom">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0">
+      <span style="font-size:12px;color:var(--muted)">Dark mode</span>
+      <label class="toggle">
+        <input type="checkbox" id="theme-toggle" onchange="toggleTheme()" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+
+<!-- DASHBOARD -->
+<section id="sec-dashboard" class="section active">
+  <div class="month-row">
+    <button class="month-btn" onclick="changeMonth(-1)">←</button>
+    <div class="month-label" id="month-display">—</div>
+    <button class="month-btn" onclick="changeMonth(1)">→</button>
+  </div>
+  <div class="cards">
+    <div class="card">
+      <div class="card-label">Income</div>
+      <div class="card-value green" id="card-income">$—</div>
+      <div class="card-sub" id="card-income-src">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Expenses</div>
+      <div class="card-value red" id="card-expense">$—</div>
+      <div class="card-sub" id="card-expense-vs">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Net Saved</div>
+      <div class="card-value" id="card-net">$—</div>
+      <div class="card-sub" id="card-net-sub">—</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Savings Rate</div>
+      <div class="card-value blue" id="card-rate">—%</div>
+      <div class="card-sub" id="card-rate-sub">of income saved</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-title">
+        Spending by Category
+        <button class="btn-icon" title="Set budgets" onclick="nav('settings');showBudgetPanel()">⚙</button>
+      </div>
+      <div id="cat-list"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Breakdown</div>
+      <div class="chart-wrap"><canvas id="donut-chart"></canvas></div>
+    </div>
+  </div>
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-title">Monthly Averages <span id="avg-subtitle" style="font-size:10px;color:var(--muted);font-weight:normal"></span></div>
+      <div id="averages-list"><div class="empty">Loading…</div></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Recent Transactions</div>
+      <table class="txn-table">
+        <thead><tr><th>Date</th><th>Name</th><th>Category</th><th style="text-align:right">Amount</th></tr></thead>
+        <tbody id="recent-txns"></tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- TRANSACTIONS -->
+<section id="sec-transactions" class="section">
+  <div class="txn-header">
+    <div class="txn-title">All Transactions</div>
+    <div class="filter-row">
+      <input type="text" id="search-input" placeholder="Search — costco, eating out, 2026-03…"
+        style="width:260px" oninput="onSearchInput()" onkeydown="if(event.key==='Escape')clearSearch()">
+      <select id="filter-type" onchange="loadTransactions()">
+        <option value="">All Types</option>
+        <option value="Expense">Expenses</option>
+        <option value="Income">Income</option>
+      </select>
+      <select id="filter-cat" onchange="loadTransactions()"><option value="">All Categories</option></select>
+      <button class="btn-ghost btn-sm btn" id="hidden-toggle" onclick="toggleHiddenView()" style="display:none">
+        👁 Hidden <span id="hidden-count-badge" class="hidden-badge">0</span>
+      </button>
+      <button class="btn btn-sm" onclick="openAddModal()">+ Add</button>
+    </div>
+  </div>
+  <div id="search-banner" class="search-banner" style="display:none"></div>
+  <table class="txn-table">
+    <thead><tr>
+      <th>Date</th><th>Name</th><th>Category</th><th>Account</th>
+      <th>Type</th><th style="text-align:right">Amount</th><th></th>
+    </tr></thead>
+    <tbody id="all-txns"></tbody>
+  </table>
+  <div id="txn-empty" class="empty" style="display:none">No transactions found</div>
+</section>
+
+<!-- YEAR REVIEW -->
+<section id="sec-year" class="section">
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+    <button class="month-btn" onclick="changeYear(-1)">←</button>
+    <div class="month-label" id="year-display">—</div>
+    <button class="month-btn" onclick="changeYear(1)">→</button>
+  </div>
+  <div class="cards" style="grid-template-columns:repeat(3,1fr)" id="year-cards"></div>
+  <div class="grid2">
+    <div class="panel">
+      <div class="panel-title">Monthly Overview</div>
+      <div id="year-bars"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Top 5 Categories</div>
+      <div id="year-cats"></div>
+    </div>
+  </div>
+</section>
+
+<!-- IMPORT -->
+<section id="sec-import" class="section">
+  <div class="panel" style="max-width:580px">
+    <div class="panel-title">Import Bank CSVs</div>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('csv-input').click()"
+      ondragover="event.preventDefault();this.classList.add('drag')"
+      ondragleave="this.classList.remove('drag')"
+      ondrop="handleDrop(event)">
+      <div class="file-icon">📂</div>
+      <strong>Drop CSV files here</strong>
+      <p>Tangerine · Wealthsimple · TD · RBC · CIBC · Scotiabank · BMO · National Bank</p>
+    </div>
+    <input type="file" id="csv-input" multiple accept=".csv" style="display:none" onchange="handleFiles(this.files)">
+    <div class="import-results" id="import-results"></div>
+  </div>
+</section>
+
+<!-- SETTINGS -->
+<section id="sec-settings" class="section">
+  <div style="max-width:600px">
+
+    <div class="settings-section">
+      <div class="settings-title">Categories</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Manage expense and income categories. Custom categories can be added, renamed, or deleted.
+      </p>
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);margin-bottom:6px">Expense Categories</div>
+        <div id="expense-cat-list"></div>
+      </div>
+      <div style="margin-bottom:12px">
+        <div style="font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;font-family:var(--mono);margin-bottom:6px">Income Categories</div>
+        <div id="income-cat-list"></div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <input type="text" id="new-cat-name" placeholder="New category name" style="flex:1;min-width:140px">
+        <input type="text" id="new-cat-icon" placeholder="🏷️" style="width:50px;text-align:center" maxlength="2">
+        <select id="new-cat-type" style="width:110px">
+          <option value="Expense">Expense</option>
+          <option value="Income">Income</option>
+        </select>
+        <button class="btn btn-sm" onclick="addCategory()">Add</button>
+      </div>
+    </div>
+
+    <div class="settings-section" id="budget-panel">
+      <div class="settings-title">Monthly Budgets</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Set spending limits per category. Progress bars appear on the dashboard.
+      </p>
+      <div id="budget-list" style="margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select id="budget-cat" style="flex:1;min-width:160px">
+          <option value="">Select category…</option>
+        </select>
+        <input type="number" id="budget-amt" placeholder="$" style="width:100px" min="1">
+        <button class="btn btn-sm" onclick="saveBudget()">Set Budget</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title">Learned Merchants</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Categories you've set manually. Deleted entries revert to auto-categorization.
+      </p>
+      <div id="learned-list"></div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>Import Rules</span>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-ghost btn-sm" onclick="openTemplateModal()">Load Template</button>
+          <button class="btn btn-sm" onclick="openRuleModal()">+ Add Rule</button>
+        </div>
+      </div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Rules run on CSV import to automatically hide, label, or force-show transactions. First match wins by priority.
+      </p>
+      <div style="margin-bottom:12px">
+        <button class="btn btn-ghost btn-sm" onclick="applyAllRules()">⚡ Apply Rules to All Existing Transactions</button>
+      </div>
+      <div id="rules-list"></div>
+    </div>
+
+  </div>
+</section>
+
+</main>
+</div>
+
+<!-- ADD MODAL -->
+<div class="modal-backdrop" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">Add Transaction</div>
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="f-date"></div>
+      <div class="form-group"><label>Type</label>
+        <select id="f-type" onchange="updateCatOptions('f-category','f-type')">
+          <option value="Expense">Expense</option>
+          <option value="Income">Income</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Name / Description</label>
+        <input type="text" id="f-name" placeholder="e.g. Tim Hortons, Dad car payment">
+      </div>
+      <div class="form-group"><label>Category</label><select id="f-category"></select></div>
+      <div class="form-group"><label>Amount ($)</label>
+        <input type="number" id="f-amount" step="0.01" min="0" placeholder="0.00">
+      </div>
+      <div class="form-group"><label>Account</label>
+        <select id="f-account">
+          <option>Tangerine Credit Card</option><option>Tangerine Chequing</option>
+          <option>Wealthsimple Chequing</option><option>RBC Chequing</option>
+          <option>TD Chequing</option><option>CIBC Chequing</option>
+          <option>Scotiabank</option><option>BMO Chequing</option>
+          <option>National Bank</option><option>Cash</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Notes (optional)</label>
+        <input type="text" id="f-notes" placeholder="e.g. March car payment to Dad">
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('add-modal')">Cancel</button>
+      <button class="btn" onclick="submitAdd()">Add</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-backdrop" id="edit-modal">
+  <div class="modal">
+    <div class="modal-title">Edit Transaction</div>
+    <input type="hidden" id="e-id">
+    <div class="form-grid">
+      <div class="form-group"><label>Date</label><input type="date" id="e-date"></div>
+      <div class="form-group"><label>Type</label>
+        <select id="e-type" onchange="updateCatOptions('e-category','e-type')">
+          <option value="Expense">Expense</option><option value="Income">Income</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Name</label><input type="text" id="e-name"></div>
+      <div class="form-group"><label>Category</label><select id="e-category"></select></div>
+      <div class="form-group"><label>Amount ($)</label>
+        <input type="number" id="e-amount" step="0.01" min="0">
+      </div>
+      <div class="form-group"><label>Account</label>
+        <select id="e-account">
+          <option>Tangerine Credit Card</option><option>Tangerine Chequing</option>
+          <option>Wealthsimple Chequing</option><option>RBC Chequing</option>
+          <option>TD Chequing</option><option>CIBC Chequing</option>
+          <option>Scotiabank</option><option>BMO Chequing</option>
+          <option>National Bank</option><option>Cash</option><option>Other</option>
+        </select>
+      </div>
+      <div class="form-group full"><label>Notes</label><input type="text" id="e-notes"></div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-red btn-sm" onclick="deleteFromEdit()">Delete</button>
+      <div style="flex:1"></div>
+      <button class="btn btn-ghost" onclick="closeModal('edit-modal')">Cancel</button>
+      <button class="btn" onclick="submitEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- UNKNOWN CSV WIZARD MODAL -->
+<div class="modal-backdrop" id="csv-wizard-modal">
+  <div class="modal" style="width:640px">
+    <!-- Step 1: Preview -->
+    <div id="wizard-step-1">
+      <div class="modal-title">⚠ Unknown Bank Format</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">
+        We don't recognize this CSV format. Map the columns below so we can import it.
+      </p>
+      <div style="overflow-x:auto;margin-bottom:16px">
+        <table class="txn-table" id="wizard-preview-table" style="font-size:12px"></table>
+      </div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="closeModal('csv-wizard-modal')">Cancel</button>
+        <button class="btn" onclick="wizardStep(2)">Map Columns →</button>
+      </div>
+    </div>
+    <!-- Step 2: Column Mapping -->
+    <div id="wizard-step-2" style="display:none">
+      <div class="modal-title">Map Columns</div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Date Column</label>
+          <select id="wiz-date-col"></select>
+        </div>
+        <div class="form-group">
+          <label>Date Format</label>
+          <select id="wiz-date-fmt">
+            <option value="%Y-%m-%d">YYYY-MM-DD</option>
+            <option value="%m/%d/%Y">MM/DD/YYYY</option>
+            <option value="%d/%m/%Y">DD/MM/YYYY</option>
+            <option value="%m-%d-%Y">MM-DD-YYYY</option>
+            <option value="%d-%m-%Y">DD-MM-YYYY</option>
+          </select>
+        </div>
+        <div class="form-group full">
+          <label>Description Column</label>
+          <select id="wiz-desc-col"></select>
+        </div>
+        <div class="form-group full">
+          <label>Amount Structure</label>
+          <select id="wiz-amt-mode" onchange="toggleAmountMode()">
+            <option value="single">Single column (positive/negative)</option>
+            <option value="split">Two columns (Debit &amp; Credit)</option>
+          </select>
+        </div>
+        <div id="wiz-single-amt" class="form-group full">
+          <label>Amount Column</label>
+          <select id="wiz-amt-col"></select>
+        </div>
+        <div id="wiz-split-amt" style="display:none" class="form-grid full">
+          <div class="form-group">
+            <label>Debit / Withdrawal Column</label>
+            <select id="wiz-debit-col"></select>
+          </div>
+          <div class="form-group">
+            <label>Credit / Deposit Column</label>
+            <select id="wiz-credit-col"></select>
+          </div>
+        </div>
+      </div>
+      <div class="form-actions" style="margin-top:16px">
+        <button class="btn btn-ghost" onclick="wizardStep(1)">← Back</button>
+        <button class="btn" onclick="wizardStep(3)">Name Bank →</button>
+      </div>
+    </div>
+    <!-- Step 3: Name & Preview -->
+    <div id="wizard-step-3" style="display:none">
+      <div class="modal-title">Name This Bank</div>
+      <div class="form-group" style="margin-bottom:16px">
+        <label>Bank / Account Name</label>
+        <input type="text" id="wiz-bank-name" placeholder="e.g. ATB Financial Chequing" style="width:100%">
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="wizardPreview()" style="margin-bottom:12px">
+        🔍 Test — preview parsed transactions
+      </button>
+      <div id="wizard-preview-parsed" style="max-height:200px;overflow-y:auto;margin-bottom:12px"></div>
+      <div class="form-actions">
+        <button class="btn btn-ghost" onclick="wizardStep(2)">← Back</button>
+        <button class="btn" onclick="wizardSaveAndImport()">Save Config & Import</button>
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--muted)">
+        💡 Want to share this config with the community?
+        <a href="https://github.com/topics/canadafinance" target="_blank" style="color:var(--accent)">Submit on GitHub</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- RULE MODAL -->
+<div class="modal-backdrop" id="rule-modal">
+  <div class="modal" style="width:560px">
+    <div class="modal-title" id="rule-modal-title">Add Import Rule</div>
+    <input type="hidden" id="rule-edit-id" value="">
+    <div class="form-group" style="margin-bottom:14px">
+      <label>Rule Name</label>
+      <input type="text" id="rule-name" placeholder="e.g. Hide credit card payments" style="width:100%">
+    </div>
+    <div style="margin-bottom:14px">
+      <label>Conditions <span style="color:var(--muted);text-transform:none;letter-spacing:0">(all must match)</span></label>
+      <div id="rule-conditions-list" style="margin-top:8px"></div>
+      <button class="btn btn-ghost btn-sm" onclick="addConditionRow()" style="margin-top:6px">+ Add Condition</button>
+    </div>
+    <div style="margin-bottom:14px">
+      <label>Action</label>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);cursor:pointer">
+          <input type="radio" name="rule-action" value="hide" checked onchange="toggleLabelFields()"> Hide this transaction
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);cursor:pointer">
+          <input type="radio" name="rule-action" value="label" onchange="toggleLabelFields()"> Label as:
+        </label>
+        <div id="rule-label-fields" style="display:none;margin-left:24px;display:none;gap:8px">
+          <select id="rule-label-type" style="width:110px" onchange="updateRuleCatOptions()">
+            <option value="Income">Income</option><option value="Expense">Expense</option>
+          </select>
+          <select id="rule-label-category" style="flex:1"></select>
+        </div>
+        <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0;font-size:13px;color:var(--text);cursor:pointer">
+          <input type="radio" name="rule-action" value="pass" onchange="toggleLabelFields()"> Always show (override hide rules)
+        </label>
+      </div>
+    </div>
+    <div class="form-actions">
+      <button class="btn btn-ghost btn-sm" onclick="testRule()" style="margin-right:auto">🔍 Test</button>
+      <button class="btn btn-ghost" onclick="closeModal('rule-modal')">Cancel</button>
+      <button class="btn" onclick="saveRule()">Save Rule</button>
+    </div>
+    <div id="rule-test-results" style="margin-top:14px;display:none;max-height:200px;overflow-y:auto"></div>
+  </div>
+</div>
+
+<!-- TEMPLATE MODAL -->
+<div class="modal-backdrop" id="template-modal">
+  <div class="modal" style="width:500px">
+    <div class="modal-title">Load Rule Template</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:14px">
+      Templates add preset rules to your list. Your existing rules are not affected.
+    </p>
+    <div id="template-list"><div class="empty">Loading…</div></div>
+    <div class="form-actions">
+      <button class="btn btn-ghost" onclick="closeModal('template-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>

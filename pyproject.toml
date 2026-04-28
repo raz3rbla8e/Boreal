@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.backends._legacy:_Backend"
+
+[project]
+name = "canada-finance"
+version = "1.0.0"
+description = "Personal Finance Dashboard for Canadians"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "flask>=3.0.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+canada-finance = "canada_finance:main"
+
+[tool.setuptools.packages.find]
+include = ["canada_finance*"]
+
+[tool.setuptools.package-data]
+canada_finance = ["templates/**", "static/**"]
