@@ -121,15 +121,10 @@ def get_setting(key, default=""):
     row = db.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
     return row["value"] if row else default
 
-# ── CATEGORIES ────────────────────────────────────────────────────────────────
-
-EXPENSE_CATS = [
-    "Eating Out", "Groceries", "Fuel", "Transport", "Entertainment",
-    "Subscriptions", "Healthcare", "Pharmacy", "Clothing", "Shopping",
-    "Home", "Insurance", "Travel", "Education", "Phone", "Internet",
-    "Utilities", "Car Payment", "Rent", "Savings Transfer", "Misc",
-]
-INCOME_CATS = ["Job", "Freelance", "Bonus", "Refund", "Other Income"]
+# ── AUTO-CATEGORIZATION RULES ────────────────────────────────────────────────
+# Keyword → category mapping used at import time.  The list of valid categories
+# is stored in the DB 'categories' table (seeded on first run, editable in Settings).
+# These rules just tell the auto-categorizer which keywords map to which category.
 
 CATEGORY_RULES = {
     "Subscriptions": [
