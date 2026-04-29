@@ -683,16 +683,26 @@ async function loadRules() {
     el.innerHTML = '<div style="color:var(--muted);font-size:12px;font-family:var(--mono)">No rules — add one or load a template</div>';
     return;
   }
-  el.innerHTML = rules.map(r => {
+  el.innerHTML = rules.map((r, idx) => {
+    const opLabels = {contains:'contains', not_contains:'NOT contains', contains_any:'contains any of',
+      equals:'equals', not_equals:'NOT equals', starts_with:'starts with', ends_with:'ends with',
+      greater_than:'>', less_than:'<'};
     const condText = r.conditions.map(c =>
-      `${c.field} ${c.operator} "${c.value}"`
+      `${c.field} ${opLabels[c.operator]||c.operator} "${c.value}"`
     ).join(' AND ');
     const enabledCheck = r.enabled ? 'checked' : '';
     let actionInfo = '';
     if (r.action === 'label' && r.action_value) {
       try { const v = JSON.parse(r.action_value); actionInfo = ` → ${v.type||''} / ${v.category||''}`; } catch(e) {}
     }
-    return `<div class="rule-row">
+    return `<div class="rule-row" data-rule-id="${r.id}">
+      <div class="rule-priority" style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:28px">
+        <button class="btn-icon btn-reorder" onclick="moveRule(${r.id},-1)" title="Move up" ${idx===0?'disabled':''}
+          style="font-size:10px;padding:0;line-height:1;opacity:${idx===0?'.3':'1'}">▲</button>
+        <span style="font-size:11px;font-family:var(--mono);color:var(--muted)">${idx+1}</span>
+        <button class="btn-icon btn-reorder" onclick="moveRule(${r.id},1)" title="Move down" ${idx===rules.length-1?'disabled':''}
+          style="font-size:10px;padding:0;line-height:1;opacity:${idx===rules.length-1?'.3':'1'}">▼</button>
+      </div>
       <label class="toggle" style="flex-shrink:0">
         <input type="checkbox" ${enabledCheck} onchange="toggleRule(${r.id}, this.checked)">
         <span class="toggle-slider"></span>
@@ -721,6 +731,22 @@ async function deleteRule(id) {
   await fetch(`/api/rules/${id}`, {method:'DELETE'});
   loadRules();
   toast('Rule deleted', 'success');
+}
+
+async function moveRule(id, direction) {
+  // Get current rule order from DOM
+  const rows = [...document.querySelectorAll('#rules-list .rule-row')];
+  const ids = rows.map(r => parseInt(r.dataset.ruleId));
+  const idx = ids.indexOf(id);
+  if (idx < 0) return;
+  const newIdx = idx + direction;
+  if (newIdx < 0 || newIdx >= ids.length) return;
+  // Swap
+  [ids[idx], ids[newIdx]] = [ids[newIdx], ids[idx]];
+  await fetch('/api/rules/reorder', {method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({order: ids})});
+  loadRules();
 }
 
 function openRuleModal(editData) {
@@ -773,16 +799,32 @@ function addConditionRow(field, operator, value) {
       <option value="account" ${field==='account'?'selected':''}>Account</option>
       <option value="type" ${field==='type'?'selected':''}>Type</option>
     </select>
-    <select class="cond-op" style="width:120px">
+    <select class="cond-op" style="width:130px">
       <option value="contains" ${operator==='contains'?'selected':''}>contains</option>
+      <option value="not_contains" ${operator==='not_contains'?'selected':''}>not contains</option>
+      <option value="contains_any" ${operator==='contains_any'?'selected':''}>contains any</option>
       <option value="equals" ${operator==='equals'?'selected':''}>equals</option>
+      <option value="not_equals" ${operator==='not_equals'?'selected':''}>not equals</option>
+      <option value="starts_with" ${operator==='starts_with'?'selected':''}>starts with</option>
+      <option value="ends_with" ${operator==='ends_with'?'selected':''}>ends with</option>
       <option value="greater_than" ${operator==='greater_than'?'selected':''}>greater than</option>
       <option value="less_than" ${operator==='less_than'?'selected':''}>less than</option>
     </select>
-    <input type="text" class="cond-value" value="${(value||'').replace(/"/g,'&quot;')}" placeholder="value" style="flex:1;min-width:100px">
+    <input type="text" class="cond-value" value="${(value||'').replace(/"/g,'&quot;')}" placeholder="value (case-insensitive)" style="flex:1;min-width:100px">
     <button class="btn-icon" onclick="this.parentElement.remove()" style="color:var(--red)">×</button>`;
   document.getElementById('rule-conditions-list').appendChild(row);
   if (field) updateOperatorOptions(row.querySelector('.cond-field'));
+  // Update placeholder based on operator
+  const opSelect = row.querySelector('.cond-op');
+  opSelect.addEventListener('change', () => updateCondPlaceholder(row));
+  updateCondPlaceholder(row);
+}
+
+function updateCondPlaceholder(row) {
+  const op = row.querySelector('.cond-op').value;
+  const input = row.querySelector('.cond-value');
+  if (op === 'contains_any') input.placeholder = 'comma-separated, e.g. vaibhav, jonas';
+  else input.placeholder = 'value (case-insensitive)';
 }
 
 function updateOperatorOptions(fieldSelect) {
@@ -797,9 +839,15 @@ function updateOperatorOptions(fieldSelect) {
   } else {
     opSelect.innerHTML = `
       <option value="contains">contains</option>
-      <option value="equals">equals</option>`;
+      <option value="not_contains">not contains</option>
+      <option value="contains_any">contains any</option>
+      <option value="equals">equals</option>
+      <option value="not_equals">not equals</option>
+      <option value="starts_with">starts with</option>
+      <option value="ends_with">ends with</option>`;
   }
   if ([...opSelect.options].some(o => o.value === current)) opSelect.value = current;
+  updateCondPlaceholder(fieldSelect.closest('.condition-row'));
 }
 
 function toggleLabelFields() {

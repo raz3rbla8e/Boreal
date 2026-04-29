@@ -79,7 +79,7 @@ def init_db(app):
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
                 rule_id     INTEGER NOT NULL REFERENCES import_rules(id) ON DELETE CASCADE,
                 field       TEXT NOT NULL CHECK(field IN ('description','amount','account','type')),
-                operator    TEXT NOT NULL CHECK(operator IN ('contains','equals','greater_than','less_than')),
+                operator    TEXT NOT NULL CHECK(operator IN ('contains','not_contains','equals','not_equals','contains_any','starts_with','ends_with','greater_than','less_than')),
                 value       TEXT NOT NULL
             );
         """)
@@ -90,6 +90,24 @@ def init_db(app):
             pass  # column already exists
         try:
             db.execute("CREATE INDEX IF NOT EXISTS idx_hidden ON transactions(hidden)")
+        except sqlite3.OperationalError:
+            pass
+        # Migrate rule_conditions to support new operators (for existing databases)
+        try:
+            row = db.execute("SELECT sql FROM sqlite_master WHERE type='table' AND name='rule_conditions'").fetchone()
+            if row and "not_contains" not in row[0]:
+                db.executescript("""
+                    CREATE TABLE rule_conditions_new (
+                        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                        rule_id     INTEGER NOT NULL REFERENCES import_rules(id) ON DELETE CASCADE,
+                        field       TEXT NOT NULL CHECK(field IN ('description','amount','account','type')),
+                        operator    TEXT NOT NULL CHECK(operator IN ('contains','not_contains','equals','not_equals','contains_any','starts_with','ends_with','greater_than','less_than')),
+                        value       TEXT NOT NULL
+                    );
+                    INSERT INTO rule_conditions_new SELECT * FROM rule_conditions;
+                    DROP TABLE rule_conditions;
+                    ALTER TABLE rule_conditions_new RENAME TO rule_conditions;
+                """)
         except sqlite3.OperationalError:
             pass
         # Default settings

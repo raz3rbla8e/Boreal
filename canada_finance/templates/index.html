@@ -251,6 +251,8 @@
       </div>
       <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
         Rules run on CSV import to automatically hide, label, or force-show transactions. First match wins by priority.
+        All matching is case-insensitive. At equal priority, more specific rules (more conditions) are evaluated first.
+        Use ▲/▼ to reorder.
       </p>
       <div style="margin-bottom:12px">
         <button class="btn btn-ghost btn-sm" onclick="applyAllRules()">⚡ Apply Rules to All Existing Transactions</button>

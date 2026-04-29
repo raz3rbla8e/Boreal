@@ -13,7 +13,7 @@ rules_bp = Blueprint("rules", __name__)
 
 VALID_RULE_ACTIONS = {"hide", "label", "pass"}
 VALID_RULE_FIELDS = {"description", "amount", "account", "type"}
-VALID_RULE_OPERATORS = {"contains", "equals", "greater_than", "less_than"}
+VALID_RULE_OPERATORS = {"contains", "not_contains", "equals", "not_equals", "contains_any", "starts_with", "ends_with", "greater_than", "less_than"}
 
 
 @rules_bp.route("/api/rules")

@@ -45,17 +45,30 @@ def _condition_matches(condition, tx):
     expected_str = str(expected).lower()
     if op == "contains":
         return expected_str in actual_str
+    if op == "not_contains":
+        return expected_str not in actual_str
     if op == "equals":
         return actual_str == expected_str
+    if op == "not_equals":
+        return actual_str != expected_str
+    if op == "contains_any":
+        return any(v.strip() in actual_str for v in expected_str.split(",") if v.strip())
+    if op == "starts_with":
+        return actual_str.startswith(expected_str)
+    if op == "ends_with":
+        return actual_str.endswith(expected_str)
     return False
 
 
 def evaluate_rules(tx, rules=None):
     """Run a transaction through all enabled rules. Returns matched rule or None.
-    First match wins (lowest priority number)."""
+    First match wins (lowest priority number). Within the same priority,
+    rules with more conditions (more specific) are evaluated first."""
     if rules is None:
         rules = load_enabled_rules()
-    for rule in rules:
+    # Sort by priority ASC, then condition count DESC (more specific first), then id ASC
+    sorted_rules = sorted(rules, key=lambda r: (r["priority"], -len(r["conditions"]), r["id"]))
+    for rule in sorted_rules:
         if not rule["conditions"]:
             continue  # skip rules with no conditions
         if all(_condition_matches(c, tx) for c in rule["conditions"]):

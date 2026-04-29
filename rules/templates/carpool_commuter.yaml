@@ -1,33 +1,21 @@
 # Carpool / Commuter — label e-transfers from specific people as income
 #
 # HOW TO USE:
-# After loading this template, edit each rule and replace the placeholder
-# values with the actual names and category you want:
-#   - Replace "PERSON_NAME_1" / "PERSON_NAME_2" with the person's name
-#     as it appears in your e-transfer descriptions
-#   - Replace "Carpool Income" with your preferred category name
-#     (you may need to create this category first in Settings → Categories)
+# After loading this template, edit the "Label carpool e-transfers" rule
+# and replace the placeholder names with the actual names as they appear
+# in your e-transfer descriptions (comma-separated for multiple people).
+# You may need to create a "Carpool Income" category first in Settings → Categories.
 #
 name: "Carpool / Commuter"
-description: "Labels Interac e-transfers from specific people as income. Edit rules after loading to fill in names and categories."
+description: "Labels Interac e-transfers from specific people as income using contains_any. Edit rule after loading to fill in names."
 rules:
-  - name: "Label e-transfer from Person 1"
+  - name: "Label carpool e-transfers"
     action: label
     action_value: '{"type": "Income", "category": "Carpool Income"}'
     conditions:
       - field: description
-        operator: contains
-        value: "PERSON_NAME_1"
-      - field: description
-        operator: contains
-        value: "interac"
-  - name: "Label e-transfer from Person 2"
-    action: label
-    action_value: '{"type": "Income", "category": "Carpool Income"}'
-    conditions:
-      - field: description
-        operator: contains
-        value: "PERSON_NAME_2"
+        operator: contains_any
+        value: "PERSON_NAME_1, PERSON_NAME_2"
       - field: description
         operator: contains
         value: "interac"
