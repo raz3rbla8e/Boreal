@@ -73,8 +73,8 @@ def api_add():
         return jsonify({"ok": True})
     except sqlite3.IntegrityError:
         return jsonify({"error": "Duplicate transaction"}), 409
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid transaction data"}), 400
 
 
 @transactions_bp.route("/api/update/<int:tid>", methods=["PATCH"])

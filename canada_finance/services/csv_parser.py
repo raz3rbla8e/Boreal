@@ -6,7 +6,7 @@ import re
 import yaml
 
 from canada_finance.config import BANKS_DIR
-from canada_finance.services.helpers import parse_date, safe_float
+from canada_finance.services.helpers import parse_date, safe_abs_float
 from canada_finance.services.categorization import categorize
 
 
@@ -184,8 +184,8 @@ def parse_with_config(text: str, config: dict, learned: dict) -> list:
             elif has_debit_credit:
                 d_raw = row.get(debit_key, "").strip() if debit_key else ""
                 c_raw = row.get(credit_key, "").strip() if credit_key else ""
-                d = safe_float(d_raw) if d_raw else 0
-                c = safe_float(c_raw) if c_raw else 0
+                d = safe_abs_float(d_raw) if d_raw else 0
+                c = safe_abs_float(c_raw) if c_raw else 0
                 if d > 0:
                     txns.append(_make_txn(dt, "Expense", desc, d,
                                           acct, learned, "UNCATEGORIZED"))

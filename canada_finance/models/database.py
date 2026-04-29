@@ -141,9 +141,9 @@ def init_db(app):
         db.commit()
 
 
-def tx_hash(date_str, name, amount, account):
+def tx_hash(date_str: str, name: str, amount: float, account: str) -> str:
     key = f"{date_str}|{name}|{amount:.2f}|{account}"
-    return hashlib.md5(key.encode()).hexdigest()
+    return hashlib.sha256(key.encode()).hexdigest()
 
 
 def get_setting(key, default=""):

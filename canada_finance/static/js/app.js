@@ -14,8 +14,27 @@ function escapeAttr(str) {
 }
 
 // ── API FETCH WRAPPER ─────────────────────────────────────────────────────────
+let _csrfToken = null;
+
+async function _ensureCsrf() {
+  if (_csrfToken) return _csrfToken;
+  try {
+    const res = await fetch('/api/csrf-token');
+    const data = await res.json();
+    _csrfToken = data.csrf_token;
+  } catch(e) { _csrfToken = ''; }
+  return _csrfToken;
+}
+
 async function apiFetch(url, opts = {}) {
   try {
+    // Attach CSRF token to mutating requests
+    const method = (opts.method || 'GET').toUpperCase();
+    if (method !== 'GET' && method !== 'HEAD') {
+      const token = await _ensureCsrf();
+      opts.headers = opts.headers || {};
+      opts.headers['X-CSRF-Token'] = token;
+    }
     const res = await fetch(url, opts);
     if (!res.ok) {
       let msg = `Server error (${res.status})`;

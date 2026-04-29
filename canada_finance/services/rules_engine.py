@@ -1,28 +1,37 @@
 import json
 import sqlite3
 
-from canada_finance.models.database import get_db_path
+from canada_finance.models.database import get_db, get_db_path
 
 
-def load_enabled_rules():
-    """Load all enabled import rules with their conditions, ordered by priority."""
-    with sqlite3.connect(get_db_path()) as db:
-        db.row_factory = sqlite3.Row
-        rules = db.execute(
-            "SELECT * FROM import_rules WHERE enabled=1 ORDER BY priority ASC, id ASC"
+def load_enabled_rules(db=None):
+    """Load all enabled import rules with their conditions, ordered by priority.
+
+    Accepts an optional db connection. Falls back to Flask's get_db() when
+    called inside a request context, or opens a standalone connection otherwise.
+    """
+    if db is None:
+        try:
+            db = get_db()
+        except RuntimeError:
+            # Outside Flask request context (e.g. during import via save_transactions)
+            db = sqlite3.connect(get_db_path())
+            db.row_factory = sqlite3.Row
+    rules = db.execute(
+        "SELECT * FROM import_rules WHERE enabled=1 ORDER BY priority ASC, id ASC"
+    ).fetchall()
+    result = []
+    for r in rules:
+        conditions = db.execute(
+            "SELECT field, operator, value FROM rule_conditions WHERE rule_id=?",
+            (r["id"],)
         ).fetchall()
-        result = []
-        for r in rules:
-            conditions = db.execute(
-                "SELECT field, operator, value FROM rule_conditions WHERE rule_id=?",
-                (r["id"],)
-            ).fetchall()
-            result.append({
-                "id": r["id"], "name": r["name"], "priority": r["priority"],
-                "action": r["action"], "action_value": r["action_value"],
-                "conditions": [dict(c) for c in conditions],
-            })
-        return result
+        result.append({
+            "id": r["id"], "name": r["name"], "priority": r["priority"],
+            "action": r["action"], "action_value": r["action_value"],
+            "conditions": [dict(c) for c in conditions],
+        })
+    return result
 
 
 def _condition_matches(condition, tx):
@@ -99,25 +108,29 @@ def apply_rule_to_transaction(tx, rule):
 def save_transactions(txns: list) -> tuple:
     from canada_finance.models.database import tx_hash
     added = dupes = 0
-    rules = load_enabled_rules()
-    with sqlite3.connect(get_db_path()) as db:
-        for t in txns:
-            # Apply import rules before saving
-            if "hidden" not in t:
-                t["hidden"] = 0
-            matched_rule = evaluate_rules(t, rules)
-            if matched_rule:
-                apply_rule_to_transaction(t, matched_rule)
-            h = tx_hash(t["date"], t["name"], t["amount"], t["account"])
-            try:
-                db.execute("""INSERT INTO transactions
-                    (date,type,name,category,amount,account,notes,source,tx_hash,hidden)
-                    VALUES (?,?,?,?,?,?,?,?,?,?)""",
-                    (t["date"], t["type"], t["name"], t["category"],
-                     t["amount"], t["account"], t.get("notes", ""), t.get("source", "csv"), h,
-                     t.get("hidden", 0)))
-                added += 1
-            except sqlite3.IntegrityError:
-                dupes += 1
+    try:
+        db = get_db()
+    except RuntimeError:
+        db = sqlite3.connect(get_db_path())
+        db.row_factory = sqlite3.Row
+    rules = load_enabled_rules(db)
+    for t in txns:
+        # Apply import rules before saving
+        if "hidden" not in t:
+            t["hidden"] = 0
+        matched_rule = evaluate_rules(t, rules)
+        if matched_rule:
+            apply_rule_to_transaction(t, matched_rule)
+        h = tx_hash(t["date"], t["name"], t["amount"], t["account"])
+        try:
+            db.execute("""INSERT INTO transactions
+                (date,type,name,category,amount,account,notes,source,tx_hash,hidden)
+                VALUES (?,?,?,?,?,?,?,?,?,?)""",
+                (t["date"], t["type"], t["name"], t["category"],
+                 t["amount"], t["account"], t.get("notes", ""), t.get("source", "csv"), h,
+                 t.get("hidden", 0)))
+            added += 1
+        except sqlite3.IntegrityError:
+            dupes += 1
         db.commit()
     return added, dupes
