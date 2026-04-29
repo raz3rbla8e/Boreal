@@ -180,13 +180,43 @@ def api_bulk_categorize():
     if not ids or not isinstance(ids, list) or not category:
         return jsonify({"error": "IDs and category required"}), 400
     db = get_db()
+    db.row_factory = sqlite3.Row
     placeholders = ",".join("?" * len(ids))
+    # Learn merchants from the selected transactions
+    rows = db.execute(
+        f"SELECT DISTINCT name FROM transactions WHERE id IN ({placeholders})", ids
+    ).fetchall()
+    for row in rows:
+        keyword = row["name"].lower().strip()
+        if keyword:
+            db.execute(
+                """INSERT INTO learned_merchants (keyword, category) VALUES (?,?)
+                ON CONFLICT(keyword) DO UPDATE SET category=excluded.category, updated_at=datetime('now')""",
+                (keyword, category),
+            )
+    # Update selected transactions
     db.execute(
         f"UPDATE transactions SET category=? WHERE id IN ({placeholders})",
         [category] + ids,
     )
+    # Retroactively fix other matching transactions
+    retro_fixed = 0
+    all_learned = db.execute("SELECT keyword, category FROM learned_merchants").fetchall()
+    for row in rows:
+        orig_name = row["name"].lower().strip()
+        words = [w for w in orig_name.split() if len(w) > 3]
+        if not words:
+            continue
+        for txn in db.execute(
+            f"SELECT id, name FROM transactions WHERE id NOT IN ({placeholders}) AND (category='UNCATEGORIZED' OR category=?)",
+            ids + [category],
+        ).fetchall():
+            rn = txn["name"].lower()
+            if any(w in rn for w in words):
+                db.execute("UPDATE transactions SET category=? WHERE id=?", (category, txn["id"]))
+                retro_fixed += 1
     db.commit()
-    return jsonify({"ok": True, "updated": len(ids)})
+    return jsonify({"ok": True, "updated": len(ids), "learned": len(rows), "retro_fixed": retro_fixed})
 
 
 @transactions_bp.route("/api/bulk-hide", methods=["POST"])

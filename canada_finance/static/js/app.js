@@ -372,8 +372,11 @@ async function submitBulkCategorize() {
   const cat = document.getElementById('bulk-cat-select').value;
   if (!cat) return;
   closeModal('bulk-cat-modal');
-  await apiFetch('/api/bulk-categorize', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ids:[...selectedIds], category:cat})});
-  toast(`Categorized ${selectedIds.size}`,'success'); clearSelection(); renderMonth(); loadTransactions();
+  const res = await apiFetch('/api/bulk-categorize', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ids:[...selectedIds], category:cat})});
+  let msg = `Categorized ${selectedIds.size} → ${cat}`;
+  if (res && res.learned) msg += ` · learned ${res.learned} merchant${res.learned===1?'':'s'}`;
+  if (res && res.retro_fixed) msg += ` · fixed ${res.retro_fixed} other`;
+  toast(msg,'success'); clearSelection(); renderMonth(); loadTransactions();
 }
 async function bulkHide() {
   const ids = [...selectedIds];
