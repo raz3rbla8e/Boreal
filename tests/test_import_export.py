@@ -145,3 +145,26 @@ def test_export_all_time(client):
     assert r.status_code == 200
     assert b"Tim Hortons" in r.data
     assert b"Costco" in r.data
+
+
+# ── safe_abs_float ─────────────────────────────────────────────────────────────
+
+def test_safe_abs_float_strips_sign():
+    """safe_abs_float should always return absolute value."""
+    from canada_finance.services.helpers import safe_abs_float
+    assert safe_abs_float("-12.50") == 12.50
+    assert safe_abs_float("12.50") == 12.50
+    assert safe_abs_float("$1,234.56") == 1234.56
+
+
+def test_safe_abs_float_unicode_minus():
+    """Unicode minus signs should be handled."""
+    from canada_finance.services.helpers import safe_abs_float
+    assert safe_abs_float("\u221212.50") == 12.50  # U+2212 MINUS SIGN
+    assert safe_abs_float("\u201312.50") == 12.50  # U+2013 EN DASH
+
+
+def test_safe_abs_float_empty():
+    from canada_finance.services.helpers import safe_abs_float
+    assert safe_abs_float("") == 0.0
+    assert safe_abs_float("   ") == 0.0
