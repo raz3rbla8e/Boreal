@@ -88,6 +88,7 @@ async function init() {
   if (!months.length) {
     document.getElementById('month-display').textContent = 'No data yet — import a CSV!';
     populateCatFilter();
+    populateAccountFilter();
     updateCatOptions('f-category','f-type');
     populateBudgetCat();
     updateHiddenCount();
@@ -96,6 +97,7 @@ async function init() {
   currentMonthIdx = 0;
   document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
   populateCatFilter();
+  populateAccountFilter();
   updateCatOptions('f-category','f-type');
   populateBudgetCat();
   renderMonth();
@@ -240,13 +242,15 @@ async function loadTransactions() {
   const m = months[currentMonthIdx] || '';
   const typ = document.getElementById('filter-type')?.value || '';
   const cat = document.getElementById('filter-cat')?.value || '';
+  const acct = document.getElementById('filter-account')?.value || '';
   const search = document.getElementById('search-input')?.value.trim() || '';
   const banner = document.getElementById('search-banner');
   const hiddenParam = showingHidden ? '&hidden=1' : '';
+  const acctParam = acct ? `&account=${encodeURIComponent(acct)}` : '';
 
   const url = search
     ? `/api/transactions?search=${encodeURIComponent(search)}&type=${encodeURIComponent(typ)}${hiddenParam}&limit=50&offset=0`
-    : `/api/transactions?month=${m}&type=${encodeURIComponent(typ)}&category=${encodeURIComponent(cat)}${hiddenParam}&limit=50&offset=0`;
+    : `/api/transactions?month=${m}&type=${encodeURIComponent(typ)}&category=${encodeURIComponent(cat)}${acctParam}${hiddenParam}&limit=50&offset=0`;
 
   const data = await apiFetch(url);
   if (!data) return;
@@ -280,7 +284,8 @@ function renderTxnRows(txns) {
     const actionBtn = showingHidden
       ? `<button class="btn-ghost btn-sm" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();unhideTx(${t.id})">Unhide</button>`
       : `<button class="del-btn" onclick="event.stopPropagation();deleteTx(${t.id})">×</button>`;
-    return `<tr onclick="openEditModal(${escapeAttr(JSON.stringify(t))})">
+    return `<tr onclick="openEditModal(${escapeAttr(JSON.stringify(t))})" class="${selectedIds.has(t.id)?'selected':''}">
+    <td><input type="checkbox" ${selectedIds.has(t.id)?'checked':''} onclick="event.stopPropagation();toggleSelect(${t.id},this)"></td>
     <td style="font-family:var(--mono);color:var(--muted);font-size:11px">${escapeHtml(t.date)}</td>
     <td>${escapeHtml(t.name)}</td>
     <td><span class="badge">${escapeHtml(t.category)}</span></td>
@@ -325,6 +330,44 @@ function populateCatFilter() {
   sel.innerHTML = '<option value="">All</option>';
   [...EXPENSE_CATS,...INCOME_CATS].forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;sel.appendChild(o);});
   if (current) sel.value = current;
+}
+async function populateAccountFilter() {
+  const sel = document.getElementById('filter-account');
+  if (!sel) return;
+  const current = sel.value;
+  const accounts = await apiFetch('/api/accounts') || [];
+  sel.innerHTML = '<option value="">All Accounts</option>';
+  accounts.forEach(a=>{const o=document.createElement('option');o.value=a;o.textContent=a;sel.appendChild(o);});
+  if (current) sel.value = current;
+}
+
+// ── BULK SELECTION ────────────────────────────────────────────────────────────
+let selectedIds = new Set();
+function toggleSelect(id, el) {
+  if (selectedIds.has(id)) { selectedIds.delete(id); el.closest('tr').classList.remove('selected'); }
+  else { selectedIds.add(id); el.closest('tr').classList.add('selected'); }
+  updateBulkToolbar();
+}
+function updateBulkToolbar() {
+  const bar = document.getElementById('bulk-toolbar');
+  if (selectedIds.size > 0) { bar.style.display='flex'; document.getElementById('bulk-count').textContent=`${selectedIds.size} selected`; }
+  else { bar.style.display='none'; }
+}
+function clearSelection() { selectedIds.clear(); document.querySelectorAll('#all-txns tr.selected').forEach(r=>r.classList.remove('selected')); updateBulkToolbar(); }
+async function bulkDelete() {
+  if (!confirm(`Delete ${selectedIds.size} transaction(s)?`)) return;
+  await apiFetch('/api/bulk-delete', {method:'POST', body:JSON.stringify({ids:[...selectedIds]})});
+  toast(`Deleted ${selectedIds.size}`,'success'); clearSelection(); renderMonth(); loadTransactions();
+}
+async function bulkCategorize() {
+  const cat = prompt('Enter category name:');
+  if (!cat) return;
+  await apiFetch('/api/bulk-categorize', {method:'POST', body:JSON.stringify({ids:[...selectedIds], category:cat})});
+  toast(`Categorized ${selectedIds.size}`,'success'); clearSelection(); renderMonth(); loadTransactions();
+}
+async function bulkHide() {
+  await apiFetch('/api/bulk-hide', {method:'POST', body:JSON.stringify({ids:[...selectedIds]})});
+  toast(`Hidden ${selectedIds.size}`,'success'); clearSelection(); renderMonth(); loadTransactions();
 }
 
 // ── YEAR VIEW ─────────────────────────────────────────────────────────────────

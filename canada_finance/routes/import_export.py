@@ -170,3 +170,37 @@ def api_export():
     filename = f"transactions_{month or 'all'}.csv"
     return Response(generate(), mimetype="text/csv",
                     headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+
+@import_export_bp.route("/api/backup")
+def api_backup():
+    """Download the full SQLite database file as a backup."""
+    from canada_finance.config import DB_PATH
+    if not os.path.exists(DB_PATH):
+        return jsonify({"error": "No database found"}), 404
+    with open(DB_PATH, "rb") as f:
+        data = f.read()
+    filename = f"finance_backup_{datetime.now().strftime('%Y%m%d_%H%M%S')}.db"
+    return Response(data, mimetype="application/octet-stream",
+                    headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+
+@import_export_bp.route("/api/restore", methods=["POST"])
+def api_restore():
+    """Restore the database from an uploaded .db file."""
+    from canada_finance.config import DB_PATH
+    f = request.files.get("file")
+    if not f:
+        return jsonify({"error": "No file provided"}), 400
+    if not f.filename.endswith(".db"):
+        return jsonify({"error": "File must be a .db file"}), 400
+    header = f.read(16)
+    if header[:16] != b"SQLite format 3\x00":
+        return jsonify({"error": "Not a valid SQLite database"}), 400
+    f.seek(0)
+    # Close the current connection before overwriting
+    db = get_db()
+    db.close()
+    with open(DB_PATH, "wb") as out:
+        out.write(f.read())
+    return jsonify({"ok": True, "message": "Database restored successfully"})

@@ -140,16 +140,24 @@
         <option value="Income">Income</option>
       </select>
       <select id="filter-cat" onchange="loadTransactions()"><option value="">All Categories</option></select>
+      <select id="filter-account" onchange="loadTransactions()"><option value="">All Accounts</option></select>
       <button class="btn-ghost btn-sm btn" id="hidden-toggle" onclick="toggleHiddenView()" style="display:none">
         👁 Hidden <span id="hidden-count-badge" class="hidden-badge">0</span>
       </button>
       <button class="btn btn-sm" onclick="openAddModal()">+ Add</button>
     </div>
   </div>
+  <div id="bulk-toolbar" class="bulk-toolbar" style="display:none;padding:8px 16px;background:var(--card);border-radius:8px;margin-bottom:8px;display:none;align-items:center;gap:8px">
+    <span id="bulk-count" style="font-size:13px;color:var(--muted)">0 selected</span>
+    <button class="btn btn-sm" onclick="bulkCategorize()">Categorize</button>
+    <button class="btn btn-sm" onclick="bulkHide()">Hide</button>
+    <button class="btn btn-sm" style="color:var(--red)" onclick="bulkDelete()">Delete</button>
+    <button class="btn-ghost btn-sm" onclick="clearSelection()">Cancel</button>
+  </div>
   <div id="search-banner" class="search-banner" style="display:none"></div>
   <table class="txn-table">
     <thead><tr>
-      <th>Date</th><th>Name</th><th>Category</th><th>Account</th>
+      <th style="width:30px"></th><th>Date</th><th>Name</th><th>Category</th><th>Account</th>
       <th>Type</th><th style="text-align:right">Amount</th><th></th>
     </tr></thead>
     <tbody id="all-txns"></tbody>

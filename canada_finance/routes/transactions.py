@@ -36,6 +36,10 @@ def api_transactions():
         if typ:
             q += " AND type=?"
             params.append(typ)
+        acct = request.args.get("account", "")
+        if acct:
+            q += " AND account=?"
+            params.append(acct)
         q += " ORDER BY date DESC, id DESC"
 
     if limit is not None:
@@ -138,3 +142,54 @@ def api_hidden_count():
     db = get_db()
     count = db.execute("SELECT COUNT(*) as c FROM transactions WHERE hidden=1").fetchone()["c"]
     return jsonify({"count": count})
+
+
+@transactions_bp.route("/api/accounts")
+def api_accounts():
+    db = get_db()
+    rows = db.execute(
+        "SELECT DISTINCT account FROM transactions WHERE hidden=0 ORDER BY account"
+    ).fetchall()
+    return jsonify([r["account"] for r in rows])
+
+
+@transactions_bp.route("/api/bulk-delete", methods=["POST"])
+def api_bulk_delete():
+    ids = request.json.get("ids", [])
+    if not ids or not isinstance(ids, list):
+        return jsonify({"error": "No IDs provided"}), 400
+    db = get_db()
+    placeholders = ",".join("?" * len(ids))
+    db.execute(f"DELETE FROM transactions WHERE id IN ({placeholders})", ids)
+    db.commit()
+    return jsonify({"ok": True, "deleted": len(ids)})
+
+
+@transactions_bp.route("/api/bulk-categorize", methods=["POST"])
+def api_bulk_categorize():
+    ids = request.json.get("ids", [])
+    category = request.json.get("category", "").strip()
+    if not ids or not isinstance(ids, list) or not category:
+        return jsonify({"error": "IDs and category required"}), 400
+    db = get_db()
+    placeholders = ",".join("?" * len(ids))
+    db.execute(
+        f"UPDATE transactions SET category=? WHERE id IN ({placeholders})",
+        [category] + ids,
+    )
+    db.commit()
+    return jsonify({"ok": True, "updated": len(ids)})
+
+
+@transactions_bp.route("/api/bulk-hide", methods=["POST"])
+def api_bulk_hide():
+    ids = request.json.get("ids", [])
+    if not ids or not isinstance(ids, list):
+        return jsonify({"error": "No IDs provided"}), 400
+    db = get_db()
+    placeholders = ",".join("?" * len(ids))
+    db.execute(
+        f"UPDATE transactions SET hidden=1 WHERE id IN ({placeholders})", ids
+    )
+    db.commit()
+    return jsonify({"ok": True, "hidden": len(ids)})

@@ -175,3 +175,77 @@ def test_hidden_count(client):
     client.patch(f"/api/transactions/{tid}/hide")
     r = client.get("/api/transactions/hidden-count").get_json()
     assert r["count"] == 1
+
+
+# ── Account Filter ─────────────────────────────────────────────────────────────
+
+def test_accounts_list(client):
+    seed_transaction(client, account="TD Chequing")
+    seed_transaction(client, name="Costco", amount="55.00", account="Tangerine Chequing")
+    r = client.get("/api/accounts").get_json()
+    assert "TD Chequing" in r
+    assert "Tangerine Chequing" in r
+
+
+def test_accounts_excludes_hidden(client):
+    seed_transaction(client, account="Hidden Account")
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    client.patch(f"/api/transactions/{txns[0]['id']}/hide")
+    r = client.get("/api/accounts").get_json()
+    assert "Hidden Account" not in r
+
+
+def test_filter_by_account(client):
+    seed_transaction(client, name="TD tx", account="TD Chequing")
+    seed_transaction(client, name="Tang tx", amount="55.00", account="Tangerine Chequing")
+    r = client.get("/api/transactions?month=2026-03&account=TD+Chequing").get_json()
+    assert isinstance(r, list)
+    assert len(r) == 1
+    assert r[0]["name"] == "TD tx"
+
+
+# ── Bulk Actions ───────────────────────────────────────────────────────────────
+
+def test_bulk_delete(client):
+    seed_transaction(client, name="Del1")
+    seed_transaction(client, name="Del2", amount="20.00")
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    ids = [t["id"] for t in txns]
+    r = client.post("/api/bulk-delete", json={"ids": ids})
+    assert r.get_json()["deleted"] == 2
+    txns2 = client.get("/api/transactions?month=2026-03").get_json()
+    assert len(txns2) == 0
+
+
+def test_bulk_delete_empty_ids(client):
+    r = client.post("/api/bulk-delete", json={"ids": []})
+    assert r.status_code == 400
+
+
+def test_bulk_categorize(client):
+    seed_transaction(client, name="Cat1", category="Eating Out")
+    seed_transaction(client, name="Cat2", amount="20.00", category="Eating Out")
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    ids = [t["id"] for t in txns]
+    r = client.post("/api/bulk-categorize", json={"ids": ids, "category": "Groceries"})
+    assert r.get_json()["updated"] == 2
+    txns2 = client.get("/api/transactions?month=2026-03").get_json()
+    assert all(t["category"] == "Groceries" for t in txns2)
+
+
+def test_bulk_categorize_missing_category(client):
+    r = client.post("/api/bulk-categorize", json={"ids": [1], "category": ""})
+    assert r.status_code == 400
+
+
+def test_bulk_hide(client):
+    seed_transaction(client, name="Hide1")
+    seed_transaction(client, name="Hide2", amount="20.00")
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    ids = [t["id"] for t in txns]
+    r = client.post("/api/bulk-hide", json={"ids": ids})
+    assert r.get_json()["hidden"] == 2
+    txns2 = client.get("/api/transactions?month=2026-03").get_json()
+    assert len(txns2) == 0
+    hidden = client.get("/api/transactions?month=2026-03&hidden=1").get_json()
+    assert len(hidden) == 2

@@ -168,3 +168,51 @@ def test_safe_abs_float_empty():
     from canada_finance.services.helpers import safe_abs_float
     assert safe_abs_float("") == 0.0
     assert safe_abs_float("   ") == 0.0
+
+
+# ── Backup / Restore ──────────────────────────────────────────────────────────
+
+def test_backup_download(client):
+    from tests.conftest import seed_transaction
+    seed_transaction(client)
+    r = client.get("/api/backup")
+    assert r.status_code == 200
+    assert r.content_type == "application/octet-stream"
+    assert r.data[:16] == b"SQLite format 3\x00"
+    assert "finance_backup_" in r.headers["Content-Disposition"]
+
+
+def test_restore_valid_db(client, app):
+    """Restore should accept a valid SQLite .db file."""
+    from tests.conftest import seed_transaction
+    # Seed data so backup has content
+    seed_transaction(client, name="Before Restore")
+    backup = client.get("/api/backup").data
+    # Delete the transaction
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    client.delete(f"/api/delete/{txns[0]['id']}")
+    assert len(client.get("/api/transactions?month=2026-03").get_json()) == 0
+    # Restore from backup
+    r = client.post("/api/restore",
+                    data={"file": (io.BytesIO(backup), "backup.db")},
+                    content_type="multipart/form-data")
+    assert r.get_json()["ok"] is True
+
+
+def test_restore_rejects_non_db(client):
+    r = client.post("/api/restore",
+                    data={"file": (io.BytesIO(b"not a database"), "bad.db")},
+                    content_type="multipart/form-data")
+    assert r.status_code == 400
+
+
+def test_restore_rejects_wrong_extension(client):
+    r = client.post("/api/restore",
+                    data={"file": (io.BytesIO(b"something"), "data.csv")},
+                    content_type="multipart/form-data")
+    assert r.status_code == 400
+
+
+def test_restore_no_file(client):
+    r = client.post("/api/restore", content_type="multipart/form-data")
+    assert r.status_code == 400
