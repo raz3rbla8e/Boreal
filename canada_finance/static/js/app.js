@@ -366,12 +366,54 @@ async function bulkCategorize() {
   toast(`Categorized ${selectedIds.size}`,'success'); clearSelection(); renderMonth(); loadTransactions();
 }
 async function bulkHide() {
-  await apiFetch('/api/bulk-hide', {method:'POST', body:JSON.stringify({ids:[...selectedIds]})});
-  toast(`Hidden ${selectedIds.size}`,'success'); clearSelection(); renderMonth(); loadTransactions();
+  const ids = [...selectedIds];
+  await apiFetch('/api/bulk-hide', {method:'POST', body:JSON.stringify({ids})});
+  toast(`Hidden ${ids.length}`,'success');
+  // Ask if user wants to create auto-hide rules for future imports
+  const suggestions = await apiFetch('/api/suggest-hide-rules', {method:'POST', body:JSON.stringify({ids})});
+  clearSelection(); renderMonth(); loadTransactions();
+  if (suggestions && suggestions.suggestions && suggestions.suggestions.length > 0) {
+    showRuleSuggestionModal(suggestions.suggestions);
+  }
 }
 async function bulkUnhide() {
   await apiFetch('/api/bulk-unhide', {method:'POST', body:JSON.stringify({ids:[...selectedIds]})});
   toast(`Unhidden ${selectedIds.size}`,'success'); clearSelection(); renderMonth(); loadTransactions();
+}
+
+// ── RULE SUGGESTION MODAL ─────────────────────────────────────────────────────
+function showRuleSuggestionModal(suggestions) {
+  const list = document.getElementById('rule-suggest-list');
+  list.innerHTML = suggestions.map((s, i) => `
+    <label style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <input type="checkbox" checked data-idx="${i}" data-desc="${escapeAttr(s.description)}">
+      <span style="flex:1;font-size:13px">${escapeHtml(s.description)}</span>
+      <span style="font-size:11px;color:var(--muted)">${s.count} txn${s.count!==1?'s':''}</span>
+    </label>
+  `).join('');
+  document.getElementById('rule-suggest-modal').classList.add('open');
+}
+
+async function submitRuleSuggestions() {
+  const checkboxes = document.querySelectorAll('#rule-suggest-list input[type="checkbox"]:checked');
+  if (checkboxes.length === 0) {
+    closeModal('rule-suggest-modal');
+    return;
+  }
+  const rules = [];
+  checkboxes.forEach(cb => {
+    const desc = cb.dataset.desc;
+    rules.push({
+      name: `Auto-hide: ${desc}`,
+      action: 'hide',
+      conditions: [{field: 'description', operator: 'contains', value: desc}],
+    });
+  });
+  const res = await apiFetch('/api/rules/bulk-create', {method:'POST', body:JSON.stringify({rules})});
+  closeModal('rule-suggest-modal');
+  if (res && res.ok) {
+    toast(`Created ${res.created} auto-hide rule${res.created!==1?'s':''}`, 'success');
+  }
 }
 
 // ── YEAR VIEW ─────────────────────────────────────────────────────────────────

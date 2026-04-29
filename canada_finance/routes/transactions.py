@@ -215,3 +215,20 @@ def api_bulk_unhide():
     )
     db.commit()
     return jsonify({"ok": True, "unhidden": len(ids)})
+
+
+@transactions_bp.route("/api/suggest-hide-rules", methods=["POST"])
+def api_suggest_hide_rules():
+    """Given transaction IDs, return unique descriptions grouped for rule creation."""
+    d = request.json or {}
+    ids = d.get("ids", [])
+    if not ids or not isinstance(ids, list):
+        return jsonify({"error": "No IDs provided"}), 400
+    db = get_db()
+    placeholders = ",".join("?" * len(ids))
+    rows = db.execute(
+        f"SELECT name, COUNT(*) as cnt FROM transactions WHERE id IN ({placeholders}) GROUP BY name ORDER BY cnt DESC",
+        ids,
+    ).fetchall()
+    suggestions = [{"description": r["name"], "count": r["cnt"]} for r in rows]
+    return jsonify({"suggestions": suggestions})

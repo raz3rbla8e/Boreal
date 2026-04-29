@@ -125,6 +125,56 @@ def api_rules_reorder():
     return jsonify({"ok": True})
 
 
+@rules_bp.route("/api/rules/bulk-create", methods=["POST"])
+def api_rules_bulk_create():
+    """Create multiple hide rules at once (used by bulk-hide rule suggestions)."""
+    d = request.json or {}
+    rules_list = d.get("rules", [])
+    if not rules_list or not isinstance(rules_list, list):
+        return jsonify({"error": "No rules provided"}), 400
+    db = get_db()
+    max_priority = db.execute(
+        "SELECT COALESCE(MAX(priority),0) FROM import_rules"
+    ).fetchone()[0]
+    created = []
+    for i, r in enumerate(rules_list):
+        name = r.get("name", "").strip()
+        action = r.get("action", "")
+        if not name:
+            continue
+        if action not in VALID_RULE_ACTIONS:
+            continue
+        conditions = r.get("conditions", [])
+        if not conditions:
+            continue
+        valid = True
+        for c in conditions:
+            if c.get("field") not in VALID_RULE_FIELDS:
+                valid = False
+                break
+            if c.get("operator") not in VALID_RULE_OPERATORS:
+                valid = False
+                break
+            if not c.get("value", "").strip():
+                valid = False
+                break
+        if not valid:
+            continue
+        cur = db.execute(
+            "INSERT INTO import_rules (name, priority, action, action_value) VALUES (?,?,?,?)",
+            (name, max_priority + i + 1, action, r.get("action_value", "")),
+        )
+        rule_id = cur.lastrowid
+        for c in conditions:
+            db.execute(
+                "INSERT INTO rule_conditions (rule_id, field, operator, value) VALUES (?,?,?,?)",
+                (rule_id, c["field"], c["operator"], c["value"].strip()),
+            )
+        created.append(rule_id)
+    db.commit()
+    return jsonify({"ok": True, "created": len(created), "ids": created})
+
+
 @rules_bp.route("/api/rules/test", methods=["POST"])
 def api_rules_test():
     """Test a rule definition against existing transactions."""

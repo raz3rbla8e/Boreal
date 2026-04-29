@@ -278,3 +278,62 @@ def test_bulk_unhide_empty(client):
 def test_bulk_unhide_no_body(client):
     r = client.post("/api/bulk-unhide", json={})
     assert r.status_code == 400
+
+
+# ── SUGGEST HIDE RULES ────────────────────────────────────────────────────────
+
+def test_suggest_hide_rules_groups_by_description(client):
+    """Suggestions group by description and return counts."""
+    seed_transaction(client, name="CREDIT CARD PAYMENT")
+    seed_transaction(client, name="CREDIT CARD PAYMENT", amount="200.00")
+    seed_transaction(client, name="CREDIT CARD PAYMENT", amount="300.00")
+    seed_transaction(client, name="Tim Hortons", amount="5.00")
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    ids = [t["id"] for t in txns]
+    r = client.post("/api/suggest-hide-rules", json={"ids": ids})
+    j = r.get_json()
+    assert len(j["suggestions"]) == 2
+    # Ordered by count DESC
+    assert j["suggestions"][0]["description"] == "CREDIT CARD PAYMENT"
+    assert j["suggestions"][0]["count"] == 3
+    assert j["suggestions"][1]["description"] == "Tim Hortons"
+    assert j["suggestions"][1]["count"] == 1
+
+
+def test_suggest_hide_rules_single_description(client):
+    seed_transaction(client, name="E-TRANSFER TO VISA")
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    ids = [t["id"] for t in txns]
+    r = client.post("/api/suggest-hide-rules", json={"ids": ids})
+    j = r.get_json()
+    assert len(j["suggestions"]) == 1
+    assert j["suggestions"][0]["description"] == "E-TRANSFER TO VISA"
+    assert j["suggestions"][0]["count"] == 1
+
+
+def test_suggest_hide_rules_special_characters(client):
+    """Special characters in descriptions are returned correctly."""
+    seed_transaction(client, name='TIM HORTON\'S #1234 "COFFEE"')
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    ids = [t["id"] for t in txns]
+    r = client.post("/api/suggest-hide-rules", json={"ids": ids})
+    j = r.get_json()
+    assert len(j["suggestions"]) == 1
+    assert j["suggestions"][0]["description"] == 'TIM HORTON\'S #1234 "COFFEE"'
+
+
+def test_suggest_hide_rules_empty_ids(client):
+    r = client.post("/api/suggest-hide-rules", json={"ids": []})
+    assert r.status_code == 400
+
+
+def test_suggest_hide_rules_no_body(client):
+    r = client.post("/api/suggest-hide-rules", json={})
+    assert r.status_code == 400
+
+
+def test_suggest_hide_rules_nonexistent_ids(client):
+    """Non-existent IDs return no suggestions (not an error)."""
+    r = client.post("/api/suggest-hide-rules", json={"ids": [99999]})
+    j = r.get_json()
+    assert len(j["suggestions"]) == 0
