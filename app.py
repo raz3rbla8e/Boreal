@@ -15,4 +15,4 @@ if __name__ == "__main__":
     print("\n🍁 CanadaFinance")
     print("   Open: http://localhost:5000")
     print("   Stop: Ctrl+C\n")
-    app.run(debug=True, port=5000)
+    app.run(debug=False, port=5000)
