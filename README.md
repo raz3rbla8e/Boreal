@@ -54,8 +54,8 @@ A free, private, self-hosted personal finance dashboard for Canadians. Runs loca
 git clone https://github.com/raz3rbla8e/Canada_finanace
 cd Canada_finanace
 
-# 2. Install (only needs Flask + PyYAML)
-pip install .
+# 2. Install
+pip install -r requirements.txt
 
 # 3. Run
 python app.py
@@ -66,7 +66,25 @@ python app.py
 
 That's it. A `finance.db` file is created automatically on first run.
 
-**Alternative:** install in editable/dev mode with `pip install -e .`, or just install the two dependencies directly: `pip install flask pyyaml`.
+**Alternative installs:**
+- `pip install .` — full package install (adds the `canada-finance` CLI command)
+- `pip install -e .` — editable/dev mode (changes take effect immediately)
+
+**Docker:**
+```bash
+docker build -t canada-finance .
+docker run -p 5000:5000 -v finance_data:/app canada-finance
+```
+
+**Running tests:**
+```bash
+pip install -e ".[dev]"
+pytest
+```
+
+**Environment variables** (optional — see `.env.example`):
+- `SECRET_KEY` — custom session secret (auto-generated if not set)
+- `DB_PATH` — custom database file path (defaults to `finance.db`)
 
 ---
 

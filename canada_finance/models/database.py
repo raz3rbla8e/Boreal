@@ -112,6 +112,13 @@ def init_db(app):
             pass
         # Default settings
         db.execute("INSERT OR IGNORE INTO settings (key,value) VALUES ('theme','dark')")
+        # Migrate MD5 tx_hash values to SHA256 (one-time, for databases created before this change)
+        md5_rows = db.execute(
+            "SELECT id, date, name, amount, account FROM transactions WHERE length(tx_hash) = 32"
+        ).fetchall()
+        for row in md5_rows:
+            new_hash = tx_hash(row[1], row[2], row[3], row[4])
+            db.execute("UPDATE transactions SET tx_hash=? WHERE id=?", (new_hash, row[0]))
         # Seed default categories (only if table is empty)
         existing = db.execute("SELECT COUNT(*) as c FROM categories").fetchone()[0]
         if existing == 0:
