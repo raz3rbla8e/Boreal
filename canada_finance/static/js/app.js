@@ -86,9 +86,8 @@ async function init() {
 
   months = await apiFetch('/api/months') || [];
   if (!months.length) {
-    document.getElementById('month-display').textContent = 'No data yet — import a CSV!';
-    document.getElementById('month-prev').style.display = 'none';
-    document.getElementById('month-next').style.display = 'none';
+    document.getElementById('empty-state').style.display = 'flex';
+    document.getElementById('dashboard-content').style.display = 'none';
     populateCatFilter();
     populateAccountFilter();
     updateCatOptions('f-category','f-type');
@@ -98,6 +97,8 @@ async function init() {
     renderRecurring();
     return;
   }
+  document.getElementById('empty-state').style.display = 'none';
+  document.getElementById('dashboard-content').style.display = '';
   currentMonthIdx = 0;
   document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
   populateCatFilter();

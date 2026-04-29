@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>CanadaFinance</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍁</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -68,6 +69,13 @@
 
 <!-- DASHBOARD -->
 <section id="sec-dashboard" class="section active">
+  <div id="empty-state" class="empty-state" style="display:none">
+    <div class="empty-state-icon">🍁</div>
+    <h2>Welcome to CanadaFinance</h2>
+    <p>Import a bank CSV to see your dashboard come to life.</p>
+    <button class="btn-primary" onclick="nav('import')">Import your first CSV</button>
+  </div>
+  <div id="dashboard-content">
   <div class="month-row">
     <button class="month-btn" id="month-prev" onclick="changeMonth(-1)">←</button>
     <div class="month-label" id="month-display">—</div>
@@ -124,6 +132,7 @@
   <div class="panel" style="margin-top:16px">
     <div class="panel-title">Recurring & Subscriptions <span id="recurring-subtitle" style="font-size:10px;color:var(--muted);font-weight:normal"></span></div>
     <div id="recurring-list"><div class="empty">Loading…</div></div>
+  </div>
   </div>
 </section>
 
