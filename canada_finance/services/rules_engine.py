@@ -132,5 +132,5 @@ def save_transactions(txns: list) -> tuple:
             added += 1
         except sqlite3.IntegrityError:
             dupes += 1
-        db.commit()
+    db.commit()
     return added, dupes

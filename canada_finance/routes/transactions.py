@@ -62,6 +62,8 @@ def api_transactions():
 @transactions_bp.route("/api/add", methods=["POST"])
 def api_add():
     d = request.json
+    if not d:
+        return jsonify({"error": "Request body required"}), 400
     for f in ["date", "type", "name", "category", "amount", "account"]:
         if not d.get(f):
             return jsonify({"error": f"Missing: {f}"}), 400
@@ -84,6 +86,8 @@ def api_add():
 @transactions_bp.route("/api/update/<int:tid>", methods=["PATCH"])
 def api_update(tid):
     d = request.json
+    if not d:
+        return jsonify({"error": "Request body required"}), 400
     allowed = ["date", "type", "name", "category", "amount", "account", "notes"]
     sets = ", ".join(f"{k}=?" for k in d if k in allowed)
     vals = [d[k] for k in d if k in allowed] + [tid]
@@ -155,7 +159,8 @@ def api_accounts():
 
 @transactions_bp.route("/api/bulk-delete", methods=["POST"])
 def api_bulk_delete():
-    ids = request.json.get("ids", [])
+    d = request.json or {}
+    ids = d.get("ids", [])
     if not ids or not isinstance(ids, list):
         return jsonify({"error": "No IDs provided"}), 400
     db = get_db()
@@ -167,8 +172,9 @@ def api_bulk_delete():
 
 @transactions_bp.route("/api/bulk-categorize", methods=["POST"])
 def api_bulk_categorize():
-    ids = request.json.get("ids", [])
-    category = request.json.get("category", "").strip()
+    d = request.json or {}
+    ids = d.get("ids", [])
+    category = d.get("category", "").strip()
     if not ids or not isinstance(ids, list) or not category:
         return jsonify({"error": "IDs and category required"}), 400
     db = get_db()
@@ -183,7 +189,8 @@ def api_bulk_categorize():
 
 @transactions_bp.route("/api/bulk-hide", methods=["POST"])
 def api_bulk_hide():
-    ids = request.json.get("ids", [])
+    d = request.json or {}
+    ids = d.get("ids", [])
     if not ids or not isinstance(ids, list):
         return jsonify({"error": "No IDs provided"}), 400
     db = get_db()

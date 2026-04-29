@@ -2,14 +2,17 @@ import re
 from datetime import datetime
 
 
-def parse_date(raw: str) -> str:
+def parse_date(raw: str, formats=None) -> str:
     raw = raw.strip().replace("/", "-")
-    for fmt in (
+    default_fmts = (
         "%m-%d-%Y", "%Y-%m-%d", "%d-%m-%Y", "%b %d %Y",
         "%B %d %Y", "%d %b %Y", "%Y%m%d",
-    ):
+    )
+    for fmt in (formats or default_fmts):
+        # Normalize separators for matching
+        normalized_fmt = fmt.replace("/", "-")
         try:
-            return datetime.strptime(raw, fmt).strftime("%Y-%m-%d")
+            return datetime.strptime(raw, normalized_fmt).strftime("%Y-%m-%d")
         except ValueError:
             continue
     raise ValueError(f"Cannot parse date: {raw!r}")

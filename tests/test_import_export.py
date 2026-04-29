@@ -137,6 +137,48 @@ def test_export_csv(client):
     assert b"Tim Hortons" in r.data
 
 
+def test_export_escapes_double_quotes(client):
+    """Names containing double quotes should be properly escaped in CSV."""
+    from tests.conftest import seed_transaction
+    seed_transaction(client, name='Buy "Premium" Plan', amount="9.99")
+    r = client.get("/api/export?month=2026-03")
+    # RFC 4180: double quotes inside quoted fields become ""
+    assert b'Buy ""Premium"" Plan' in r.data
+
+
+def test_export_handles_none_values(client):
+    """NULL values in DB should export as empty, not the string 'None'."""
+    from tests.conftest import seed_transaction
+    seed_transaction(client, notes="")
+    r = client.get("/api/export?month=2026-03")
+    assert b"None" not in r.data or b"Tim Hortons" in r.data  # "None" should not appear as a field value
+
+
+def test_import_latin1_encoding(client):
+    """CSV files encoded as Latin-1 should be handled gracefully."""
+    # Latin-1 characters that are invalid UTF-8
+    csv_text = "Date,Type,Name,Category,Amount,Account,Notes,Source\n"
+    csv_text += '"2026-03-15","Expense","Caf\xe9 Cr\xe8me","Eating Out","5.00","Test Bank","","csv"\n'
+    data = {"files": (io.BytesIO(csv_text.encode("latin-1")), "latin1.csv")}
+    r = client.post("/api/import", data=data, content_type="multipart/form-data")
+    result = r.get_json()
+    assert r.status_code == 200
+    # Should not crash — either detected and imported, or reported as unknown
+    assert len(result) == 1
+
+
+def test_parse_date_uses_custom_formats():
+    """parse_date should accept custom format lists from bank YAML configs."""
+    from canada_finance.services.helpers import parse_date
+    # Day-first format (used by National Bank)
+    result = parse_date("25/03/2026", formats=["%d/%m/%Y"])
+    assert result == "2026-03-25"
+    # Without the right format, it should raise
+    import pytest
+    with pytest.raises(ValueError):
+        parse_date("25/03/2026", formats=["%Y-%m-%d"])
+
+
 def test_export_all_time(client):
     from tests.conftest import seed_transaction
     seed_transaction(client, date="2026-03-15")

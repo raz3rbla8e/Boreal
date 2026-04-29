@@ -30,7 +30,18 @@ def api_import():
     configs = load_bank_configs()
     results = []
     for f in request.files.getlist("files"):
-        text = f.read().decode("utf-8-sig")
+        raw = f.read()
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            try:
+                text = raw.decode("latin-1")
+            except UnicodeDecodeError:
+                results.append({
+                    "file": f.filename, "bank": "unknown", "added": 0, "dupes": 0,
+                    "last_verified": "", "error": "Unsupported file encoding",
+                })
+                continue
         first_line = text.splitlines()[0] if text.strip() else ""
         config, bank_name = detect_bank_config(first_line, configs)
         if config:
@@ -165,7 +176,10 @@ def api_export():
     def generate():
         yield "Date,Type,Name,Category,Amount,Account,Notes,Source\n"
         for r in rows:
-            yield ",".join(f'"{str(v)}"' for v in r) + "\n"
+            yield ",".join(
+                '"' + str(v if v is not None else '').replace('"', '""') + '"'
+                for v in r
+            ) + "\n"
 
     filename = f"transactions_{month or 'all'}.csv"
     return Response(generate(), mimetype="text/csv",

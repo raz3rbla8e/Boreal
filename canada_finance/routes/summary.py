@@ -41,19 +41,23 @@ def api_summary():
     ).fetchall()
     # Previous month for comparison
     if month:
-        y, m = int(month[:4]), int(month[5:7])
-        pm = date(y, m, 1) - timedelta(days=1)
-        prev_like = f"{pm.year}-{pm.month:02d}%"
-        prev_exp = db.execute(
-            "SELECT COALESCE(SUM(amount),0) as t FROM transactions WHERE type='Expense' AND hidden=0 AND date LIKE ?",
-            (prev_like,),
-        ).fetchone()["t"]
-        prev_by_cat = db.execute(
-            """SELECT category, SUM(amount) as total FROM transactions
-               WHERE type='Expense' AND hidden=0 AND date LIKE ? GROUP BY category""",
-            (prev_like,),
-        ).fetchall()
-        prev_cat_map = {r["category"]: r["total"] for r in prev_by_cat}
+        try:
+            y, m = int(month[:4]), int(month[5:7])
+            pm = date(y, m, 1) - timedelta(days=1)
+            prev_like = f"{pm.year}-{pm.month:02d}%"
+            prev_exp = db.execute(
+                "SELECT COALESCE(SUM(amount),0) as t FROM transactions WHERE type='Expense' AND hidden=0 AND date LIKE ?",
+                (prev_like,),
+            ).fetchone()["t"]
+            prev_by_cat = db.execute(
+                """SELECT category, SUM(amount) as total FROM transactions
+                   WHERE type='Expense' AND hidden=0 AND date LIKE ? GROUP BY category""",
+                (prev_like,),
+            ).fetchall()
+            prev_cat_map = {r["category"]: r["total"] for r in prev_by_cat}
+        except (ValueError, IndexError):
+            prev_exp = 0
+            prev_cat_map = {}
     else:
         prev_exp = 0
         prev_cat_map = {}
@@ -140,9 +144,9 @@ def api_recurring():
     db = get_db()
     min_months = request.args.get("min_months", 3, type=int)
     rows = db.execute("""
-        SELECT name,
-               category,
-               type,
+        SELECT MAX(name) as name,
+               MAX(category) as category,
+               MAX(type) as type,
                COUNT(DISTINCT substr(date,1,7)) as months_seen,
                ROUND(AVG(amount), 2) as avg_amount,
                ROUND(MIN(amount), 2) as min_amount,

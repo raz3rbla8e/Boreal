@@ -17,10 +17,16 @@ def api_budgets_get():
 @settings_bp.route("/api/budgets", methods=["POST"])
 def api_budgets_set():
     d = request.json
+    if not d or "category" not in d or "amount" not in d:
+        return jsonify({"error": "Category and amount required"}), 400
+    try:
+        amount = float(d["amount"])
+    except (ValueError, TypeError):
+        return jsonify({"error": "Invalid amount"}), 400
     db = get_db()
     db.execute("""INSERT INTO budgets (category, monthly_limit) VALUES (?,?)
         ON CONFLICT(category) DO UPDATE SET monthly_limit=excluded.monthly_limit
-    """, (d["category"], float(d["amount"])))
+    """, (d["category"], amount))
     db.commit()
     return jsonify({"ok": True})
 
@@ -60,6 +66,8 @@ def api_settings_get():
 @settings_bp.route("/api/settings", methods=["POST"])
 def api_settings_set():
     d = request.json
+    if not d:
+        return jsonify({"error": "Request body required"}), 400
     db = get_db()
     for key, val in d.items():
         db.execute(

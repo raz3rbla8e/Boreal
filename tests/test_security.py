@@ -175,3 +175,69 @@ def test_health_endpoint(client):
     data = r.get_json()
     assert data["status"] == "ok"
     assert "db_exists" in data
+
+
+# ── PATH TRAVERSAL ─────────────────────────────────────────────────────────────
+
+def test_rule_template_blocks_absolute_path(client):
+    """Absolute paths should be rejected by the template loader."""
+    r = client.post("/api/rule-templates/load", json={"file": "C:\\Windows\\System32\\config.yaml"})
+    assert r.status_code == 400
+    assert "Invalid" in r.get_json()["error"]
+
+
+def test_rule_template_blocks_dot_dot(client):
+    """Path traversal via .. should be rejected."""
+    r = client.post("/api/rule-templates/load", json={"file": "../../etc/passwd"})
+    assert r.status_code == 400
+
+
+def test_rule_template_blocks_empty(client):
+    r = client.post("/api/rule-templates/load", json={"file": ""})
+    assert r.status_code == 400
+
+
+def test_rule_template_no_body(client):
+    """Missing JSON body should not crash."""
+    r = client.post("/api/rule-templates/load", content_type="application/json",
+                    data="{}")
+    assert r.status_code == 400
+
+
+# ── REQUEST.JSON NONE GUARDS ──────────────────────────────────────────────────
+
+def test_add_no_body_returns_400(client):
+    r = client.post("/api/add", content_type="text/plain", data="not json")
+    assert r.status_code in (400, 415)
+
+
+def test_update_no_body_returns_400(client):
+    from tests.conftest import seed_transaction
+    seed_transaction(client)
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    tid = txns[0]["id"]
+    r = client.patch(f"/api/update/{tid}", content_type="text/plain", data="nope")
+    assert r.status_code in (400, 415)
+
+
+def test_budget_set_missing_fields(client):
+    r = client.post("/api/budgets", json={})
+    assert r.status_code == 400
+
+
+def test_budget_set_bad_amount(client):
+    r = client.post("/api/budgets", json={"category": "Food", "amount": "abc"})
+    assert r.status_code == 400
+
+
+def test_settings_no_body(client):
+    r = client.post("/api/settings", content_type="text/plain", data="nope")
+    assert r.status_code in (400, 415)
+
+
+# ── MALFORMED MONTH ────────────────────────────────────────────────────────────
+
+def test_summary_malformed_month_no_crash(client):
+    """Malformed month parameter should not crash the server."""
+    r = client.get("/api/summary?month=not-a-month")
+    assert r.status_code == 200  # gracefully defaults

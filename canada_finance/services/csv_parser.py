@@ -154,7 +154,7 @@ def parse_with_config(text: str, config: dict, learned: dict) -> list:
             raw_date = row.get(date_key, "").strip() if date_key else ""
             if not raw_date:
                 continue
-            dt = parse_date(raw_date)
+            dt = parse_date(raw_date, date_fmts)
 
             # Resolve account label
             if account_template and acct_type_key:

@@ -204,10 +204,13 @@ def api_rule_templates():
 
 @rules_bp.route("/api/rule-templates/load", methods=["POST"])
 def api_rule_templates_load():
-    fname = request.json.get("file", "")
+    d = request.json or {}
+    fname = d.get("file", "")
     if not fname or ".." in fname:
         return jsonify({"error": "Invalid template file"}), 400
-    fpath = os.path.join(RULES_TEMPLATE_DIR, fname)
+    fpath = os.path.realpath(os.path.join(RULES_TEMPLATE_DIR, fname))
+    if not fpath.startswith(os.path.realpath(RULES_TEMPLATE_DIR)):
+        return jsonify({"error": "Invalid template file"}), 400
     if not os.path.isfile(fpath):
         return jsonify({"error": "Template not found"}), 404
     with open(fpath, "r", encoding="utf-8") as f:
