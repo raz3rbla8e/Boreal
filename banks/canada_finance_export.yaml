@@ -1,0 +1,26 @@
+# Canada Finance — re-import of exported CSV
+name: Canada Finance Export
+version: 1
+last_verified: "2026-04"
+account_label: "{account_type}"
+encoding: utf-8-sig
+
+detection:
+  header_contains: ["Date", "Type", "Name", "Category", "Amount", "Account", "Notes", "Source"]
+
+columns:
+  date: Date
+  description: Name
+  amount: Amount
+  account_type: Account
+  type: Type
+  category: Category
+
+date_formats:
+  - "%Y-%m-%d"
+
+amount_sign: standard
+
+# Preserve original type and category from the export
+preserve_type: true
+preserve_category: true

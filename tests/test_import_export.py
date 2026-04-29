@@ -170,6 +170,66 @@ def test_safe_abs_float_empty():
     assert safe_abs_float("   ") == 0.0
 
 
+# ── Export → Re-import Round Trip ──────────────────────────────────────────────
+
+def test_export_reimport_round_trip(client):
+    """Export CSV, delete all transactions, re-import — data should survive."""
+    from tests.conftest import seed_transaction
+    seed_transaction(client, name="Netflix", category="Subscriptions",
+                     type="Expense", amount="16.49", account="TD Chequing")
+    seed_transaction(client, name="Payroll", category="Job",
+                     type="Income", amount="3000.00", account="Tangerine Chequing")
+
+    # Export
+    export_resp = client.get("/api/export")
+    assert export_resp.status_code == 200
+    csv_data = export_resp.data
+
+    # Delete all transactions
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    for t in txns:
+        client.delete(f"/api/delete/{t['id']}")
+    assert len(client.get("/api/transactions?month=2026-03").get_json()) == 0
+
+    # Re-import the exported CSV
+    r = client.post("/api/import",
+                    data={"files": (io.BytesIO(csv_data), "export.csv")},
+                    content_type="multipart/form-data")
+    result = r.get_json()
+    assert result[0]["bank"] == "Canada Finance Export"
+    assert result[0]["added"] == 2
+
+    # Verify data integrity
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    assert len(txns) == 2
+    netflix = next(t for t in txns if t["name"] == "Netflix")
+    payroll = next(t for t in txns if t["name"] == "Payroll")
+    assert netflix["category"] == "Subscriptions"
+    assert netflix["type"] == "Expense"
+    assert netflix["amount"] == 16.49
+    assert netflix["account"] == "TD Chequing"
+    assert payroll["category"] == "Job"
+    assert payroll["type"] == "Income"
+    assert payroll["amount"] == 3000.00
+    assert payroll["account"] == "Tangerine Chequing"
+
+
+def test_export_reimport_no_duplicates(client):
+    """Re-importing the same export without deleting should produce duplicates=2."""
+    from tests.conftest import seed_transaction
+    seed_transaction(client, name="Netflix", category="Subscriptions",
+                     type="Expense", amount="16.49")
+    seed_transaction(client, name="Payroll", category="Job",
+                     type="Income", amount="3000.00")
+    csv_data = client.get("/api/export").data
+    r = client.post("/api/import",
+                    data={"files": (io.BytesIO(csv_data), "export.csv")},
+                    content_type="multipart/form-data")
+    result = r.get_json()
+    assert result[0]["added"] == 0
+    assert result[0]["dupes"] == 2
+
+
 # ── Backup / Restore ──────────────────────────────────────────────────────────
 
 def test_backup_download(client):

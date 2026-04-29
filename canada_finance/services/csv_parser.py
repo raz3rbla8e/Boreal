@@ -123,6 +123,12 @@ def parse_with_config(text: str, config: dict, learned: dict) -> list:
     memo_key = _find_column(row_keys, memo_col_name, flexible=flexible) if memo_col_name else None
     acct_type_key = _find_column(row_keys, cols.get("account_type", ""), flexible=flexible) if "account_type" in cols else None
 
+    # Support re-import of exported CSVs with preserved type/category
+    preserve_type = config.get("preserve_type", False)
+    preserve_cat = config.get("preserve_category", False)
+    type_key = _find_column(row_keys, cols.get("type", ""), flexible=flexible) if "type" in cols else None
+    cat_key = _find_column(row_keys, cols.get("category", ""), flexible=flexible) if "category" in cols else None
+
     for row in reader:
         try:
             # Get description
@@ -167,7 +173,17 @@ def parse_with_config(text: str, config: dict, learned: dict) -> list:
                 amt_val = float(re.sub(r"[,$\s]", "", cleaned_amt))
                 if amt_val == 0:
                     continue
-                if amount_sign == "standard":
+
+                # If re-importing our own export, use the Type/Category columns directly
+                if preserve_type and type_key and row.get(type_key, "").strip():
+                    tx_type = row[type_key].strip()
+                    cat_override = row.get(cat_key, "").strip() if preserve_cat and cat_key else None
+                    txn = _make_txn(dt, tx_type, desc, abs(amt_val),
+                                    acct, learned, "UNCATEGORIZED")
+                    if cat_override:
+                        txn["category"] = cat_override
+                    txns.append(txn)
+                elif amount_sign == "standard":
                     if amt_val < 0:
                         txns.append(_make_txn(dt, "Expense", desc, abs(amt_val),
                                               acct, learned, "UNCATEGORIZED"))
