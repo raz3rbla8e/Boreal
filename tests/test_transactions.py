@@ -249,3 +249,32 @@ def test_bulk_hide(client):
     assert len(txns2) == 0
     hidden = client.get("/api/transactions?month=2026-03&hidden=1").get_json()
     assert len(hidden) == 2
+
+
+def test_bulk_unhide(client):
+    seed_transaction(client, name="Unhide1")
+    seed_transaction(client, name="Unhide2", amount="20.00")
+    txns = client.get("/api/transactions?month=2026-03").get_json()
+    ids = [t["id"] for t in txns]
+    # Hide them first
+    client.post("/api/bulk-hide", json={"ids": ids})
+    hidden = client.get("/api/transactions?month=2026-03&hidden=1").get_json()
+    assert len(hidden) == 2
+    # Bulk unhide
+    r = client.post("/api/bulk-unhide", json={"ids": ids})
+    assert r.get_json()["unhidden"] == 2
+    # Verify they are visible again
+    txns2 = client.get("/api/transactions?month=2026-03").get_json()
+    assert len(txns2) == 2
+    hidden2 = client.get("/api/transactions?month=2026-03&hidden=1").get_json()
+    assert len(hidden2) == 0
+
+
+def test_bulk_unhide_empty(client):
+    r = client.post("/api/bulk-unhide", json={"ids": []})
+    assert r.status_code == 400
+
+
+def test_bulk_unhide_no_body(client):
+    r = client.post("/api/bulk-unhide", json={})
+    assert r.status_code == 400

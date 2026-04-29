@@ -200,3 +200,18 @@ def api_bulk_hide():
     )
     db.commit()
     return jsonify({"ok": True, "hidden": len(ids)})
+
+
+@transactions_bp.route("/api/bulk-unhide", methods=["POST"])
+def api_bulk_unhide():
+    d = request.json or {}
+    ids = d.get("ids", [])
+    if not ids or not isinstance(ids, list):
+        return jsonify({"error": "No IDs provided"}), 400
+    db = get_db()
+    placeholders = ",".join("?" * len(ids))
+    db.execute(
+        f"UPDATE transactions SET hidden=0 WHERE id IN ({placeholders})", ids
+    )
+    db.commit()
+    return jsonify({"ok": True, "unhidden": len(ids)})

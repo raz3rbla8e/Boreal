@@ -369,6 +369,10 @@ async function bulkHide() {
   await apiFetch('/api/bulk-hide', {method:'POST', body:JSON.stringify({ids:[...selectedIds]})});
   toast(`Hidden ${selectedIds.size}`,'success'); clearSelection(); renderMonth(); loadTransactions();
 }
+async function bulkUnhide() {
+  await apiFetch('/api/bulk-unhide', {method:'POST', body:JSON.stringify({ids:[...selectedIds]})});
+  toast(`Unhidden ${selectedIds.size}`,'success'); clearSelection(); renderMonth(); loadTransactions();
+}
 
 // ── YEAR VIEW ─────────────────────────────────────────────────────────────────
 function changeYear(dir) { currentYear += dir; renderYear(); }
@@ -1139,20 +1143,27 @@ async function updateHiddenCount() {
 
 function toggleHiddenView() {
   showingHidden = !showingHidden;
+  clearSelection();
   const btn = document.getElementById('hidden-toggle');
   const title = document.querySelector('#sec-transactions .txn-title');
+  const hideBtn = document.getElementById('bulk-hide-btn');
+  const unhideBtn = document.getElementById('bulk-unhide-btn');
   if (showingHidden) {
     btn.classList.remove('btn-ghost');
     btn.style.background = 'rgba(248,113,113,.15)';
     btn.style.borderColor = 'rgba(248,113,113,.3)';
     btn.style.color = 'var(--red)';
     title.textContent = 'Hidden Transactions';
+    hideBtn.style.display = 'none';
+    unhideBtn.style.display = '';
   } else {
     btn.classList.add('btn-ghost');
     btn.style.background = '';
     btn.style.borderColor = '';
     btn.style.color = '';
     title.textContent = 'All Transactions';
+    hideBtn.style.display = '';
+    unhideBtn.style.display = 'none';
   }
   loadTransactions();
 }
