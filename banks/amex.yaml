@@ -1,0 +1,34 @@
+# American Express Credit Card
+name: "American Express (Credit Card)"
+version: 1
+last_verified: "2026-04"
+account_label: "Amex Credit Card"
+encoding: "utf-8-sig"
+
+skip_header_rows: 12
+
+detection:
+  header_starts_with: ","
+  header_contains:
+    - "american express"
+
+columns:
+  date: "Date"
+  description: "Description"
+  amount: "Amount"
+
+description_fallback:
+  - "Additional Information"
+  - "Merchant"
+
+date_formats:
+  - "%d %b. %Y"
+  - "%Y-%m-%d"
+
+amount_sign: "inverted"  # positive = charge/expense, negative = payment/refund
+
+credit_default_category: "Refund"
+
+skip_rows_where:
+  description_contains:
+    - "payment received"
