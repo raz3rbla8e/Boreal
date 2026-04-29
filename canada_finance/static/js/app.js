@@ -87,11 +87,15 @@ async function init() {
   months = await apiFetch('/api/months') || [];
   if (!months.length) {
     document.getElementById('month-display').textContent = 'No data yet — import a CSV!';
+    document.getElementById('month-prev').style.display = 'none';
+    document.getElementById('month-next').style.display = 'none';
     populateCatFilter();
     populateAccountFilter();
     updateCatOptions('f-category','f-type');
     populateBudgetCat();
     updateHiddenCount();
+    renderAverages();
+    renderRecurring();
     return;
   }
   currentMonthIdx = 0;

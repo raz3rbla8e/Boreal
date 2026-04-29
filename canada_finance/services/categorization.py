@@ -34,7 +34,8 @@ CATEGORY_RULES = {
     ],
     "Phone": [
         "fido", "koodo", "public mobile", "lucky mobile", "virgin mobile",
-        "bell mobility", "telus mobile", "rogers mobile", "freedom mobile", "chatr",
+        "bell mobility", "telus mobile", "rogers mobile", "rogers wireless",
+        "freedom mobile", "chatr", "phone bill",
     ],
     "Internet": [
         "bell internet", "rogers internet", "videotron", "shaw", "eastlink", "cogeco",
@@ -88,7 +89,7 @@ CATEGORY_RULES = {
         "doordash", "pizza", "burger", "wendy", "kfc", "taco bell", "harvey's", "a&w",
         "mary brown", "popeye", "chipotle", "freshii", "pita pit", "swiss chalet",
         "boston pizza", "jack astor", "milestones", "cactus club", "earls", "montana",
-        "st-hubert", "five guys", "nandos", "pho", "sushi", "thai", "domino",
+        "st-hubert", "five guys", "nandos", "pho ", "sushi", "thai", "domino",
         "papa john", "little caesar", "pizza pizza", "pizza hut", "hero burger",
         "mucho burrito", "shawarma", "falafel", "osmow", "6ixty wing", "happy lamb",
         "burrito", "chick-fil", "dairy queen", "d spot", "vietnamese", "restaurant",
