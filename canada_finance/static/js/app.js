@@ -126,6 +126,7 @@ async function renderMonth() {
   renderDonut(summary.by_category);
   renderRecentTxns(txns.filter(t=>t.type==='Expense').slice(0,6));
   renderAverages();
+  renderRecurring();
   if (document.getElementById('sec-transactions').classList.contains('active')) loadTransactions();
 }
 
@@ -196,6 +197,26 @@ async function renderAverages() {
       <div class="cat-bar-wrap"><div class="cat-bar" style="width:${(r.avg_monthly/maxAvg*100).toFixed(0)}%"></div></div>
       <span class="cat-amt">${fmt(r.avg_monthly)}<span style="color:var(--muted);font-size:10px">/mo</span></span>
     </div>`).join('');
+}
+
+// ── RECURRING / SUBSCRIPTIONS ─────────────────────────────────────────────────
+async function renderRecurring() {
+  const data = await apiFetch('/api/recurring') || {};
+  const el = document.getElementById('recurring-list');
+  const sub = document.getElementById('recurring-subtitle');
+  const items = data.recurring || [];
+  if (!items.length) { el.innerHTML = '<div class="empty">Not enough data yet (need 3+ months)</div>'; sub.textContent=''; return; }
+  sub.textContent = `${items.length} detected · ${fmt(data.total_monthly_committed)}/mo committed`;
+  el.innerHTML = items.map(r => {
+    const priceNote = r.price_changed
+      ? `<span style="color:var(--amber);font-size:10px;margin-left:4px">⚠ price changed (${fmt(r.min_amount)}→${fmt(r.max_amount)})</span>`
+      : '';
+    return `<div class="cat-row">
+      <span class="cat-name">${escapeHtml(r.name)}${priceNote}</span>
+      <span class="badge" style="margin-left:auto;margin-right:8px">${escapeHtml(r.category)}</span>
+      <span class="cat-amt">${fmt(r.avg_amount)}<span style="color:var(--muted);font-size:10px">/mo</span></span>
+    </div>`;
+  }).join('');
 }
 
 // ── RECENT TXNS ───────────────────────────────────────────────────────────────

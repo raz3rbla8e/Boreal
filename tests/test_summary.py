@@ -110,3 +110,107 @@ def test_averages(client):
 def test_averages_empty(client):
     r = client.get("/api/averages").get_json()
     assert r == []
+
+
+# ── Recurring ──────────────────────────────────────────────────────────────────
+
+def test_recurring_empty(client):
+    r = client.get("/api/recurring").get_json()
+    assert r["recurring"] == []
+    assert r["count"] == 0
+    assert r["total_monthly_committed"] == 0
+
+
+def test_recurring_detects_subscription(client):
+    """A merchant appearing in 3+ months should be detected as recurring."""
+    for m in range(1, 5):
+        seed_transaction(
+            client, date=f"2026-{m:02d}-15",
+            type="Expense", amount="16.49", category="Subscriptions",
+            name="NETFLIX", account="Tangerine Chequing",
+        )
+    r = client.get("/api/recurring").get_json()
+    assert r["count"] == 1
+    netflix = r["recurring"][0]
+    assert netflix["name"] == "NETFLIX"
+    assert netflix["months_seen"] == 4
+    assert netflix["avg_amount"] == 16.49
+    assert netflix["total_charges"] == 4
+    assert netflix["price_changed"] is False
+
+
+def test_recurring_ignores_infrequent(client):
+    """A merchant appearing in only 2 months should NOT be detected."""
+    for m in [1, 2]:
+        seed_transaction(
+            client, date=f"2026-{m:02d}-15",
+            type="Expense", amount="50.00", category="Shopping",
+            name="Random Store", account="Tangerine Chequing",
+        )
+    r = client.get("/api/recurring").get_json()
+    assert r["count"] == 0
+
+
+def test_recurring_detects_price_change(client):
+    """Price change flag should be set when amount varies."""
+    seed_transaction(client, date="2026-01-15", type="Expense", amount="16.49",
+                     category="Subscriptions", name="NETFLIX")
+    seed_transaction(client, date="2026-02-15", type="Expense", amount="16.49",
+                     category="Subscriptions", name="NETFLIX")
+    seed_transaction(client, date="2026-03-15", type="Expense", amount="17.99",
+                     category="Subscriptions", name="NETFLIX")
+    r = client.get("/api/recurring").get_json()
+    assert r["count"] == 1
+    assert r["recurring"][0]["price_changed"] is True
+    assert r["recurring"][0]["min_amount"] == 16.49
+    assert r["recurring"][0]["max_amount"] == 17.99
+
+
+def test_recurring_total_monthly_committed(client):
+    """total_monthly_committed should sum avg_amount of recurring expenses."""
+    for m in range(1, 4):
+        seed_transaction(client, date=f"2026-{m:02d}-15", type="Expense",
+                         amount="16.49", category="Subscriptions", name="NETFLIX")
+        seed_transaction(client, date=f"2026-{m:02d}-20", type="Expense",
+                         amount="9.99", category="Subscriptions", name="SPOTIFY")
+    r = client.get("/api/recurring").get_json()
+    assert r["count"] == 2
+    assert r["total_monthly_committed"] == 26.48
+
+
+def test_recurring_custom_min_months(client):
+    """min_months param should control the detection threshold."""
+    for m in range(1, 3):
+        seed_transaction(client, date=f"2026-{m:02d}-15", type="Expense",
+                         amount="10.00", category="Misc", name="BIWEEKLY THING")
+    # Default min_months=3 → not detected
+    r = client.get("/api/recurring").get_json()
+    assert r["count"] == 0
+    # min_months=2 → detected
+    r2 = client.get("/api/recurring?min_months=2").get_json()
+    assert r2["count"] == 1
+
+
+def test_recurring_excludes_hidden(client):
+    """Hidden transactions should not appear in recurring detection."""
+    for m in range(1, 4):
+        seed_transaction(client, date=f"2026-{m:02d}-15", type="Expense",
+                         amount="5.00", category="Misc", name="HIDDEN SUB")
+    # Hide all of them
+    txns = client.get("/api/transactions?search=HIDDEN SUB").get_json()
+    for t in txns:
+        client.patch(f"/api/transactions/{t['id']}/hide")
+    r = client.get("/api/recurring").get_json()
+    assert r["count"] == 0
+
+
+def test_recurring_includes_income(client):
+    """Recurring income (e.g. salary) should be detected too."""
+    for m in range(1, 4):
+        seed_transaction(client, date=f"2026-{m:02d}-01", type="Income",
+                         amount="3000.00", category="Job", name="PAYROLL DEPOSIT")
+    r = client.get("/api/recurring").get_json()
+    assert r["count"] == 1
+    assert r["recurring"][0]["type"] == "Income"
+    # Income should NOT count toward committed expenses
+    assert r["total_monthly_committed"] == 0

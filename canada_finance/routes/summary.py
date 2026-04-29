@@ -132,3 +132,40 @@ def api_averages():
         [r["m"] for r in months_with_data],
     ).fetchall()
     return jsonify([dict(r) for r in rows])
+
+
+@summary_bp.route("/api/recurring")
+def api_recurring():
+    """Detect recurring transactions — same merchant appearing in 3+ distinct months."""
+    db = get_db()
+    min_months = request.args.get("min_months", 3, type=int)
+    rows = db.execute("""
+        SELECT name,
+               category,
+               type,
+               COUNT(DISTINCT substr(date,1,7)) as months_seen,
+               ROUND(AVG(amount), 2) as avg_amount,
+               ROUND(MIN(amount), 2) as min_amount,
+               ROUND(MAX(amount), 2) as max_amount,
+               COUNT(*) as total_charges,
+               MAX(date) as last_seen,
+               MIN(date) as first_seen
+        FROM transactions
+        WHERE hidden=0
+        GROUP BY LOWER(TRIM(name))
+        HAVING months_seen >= ?
+        ORDER BY months_seen DESC, avg_amount DESC
+    """, (min_months,)).fetchall()
+    recurring = []
+    for r in rows:
+        entry = dict(r)
+        entry["price_changed"] = round(r["max_amount"] - r["min_amount"], 2) > 0.01
+        recurring.append(entry)
+    total_monthly = sum(
+        r["avg_amount"] for r in recurring if r["type"] == "Expense"
+    )
+    return jsonify({
+        "recurring": recurring,
+        "total_monthly_committed": round(total_monthly, 2),
+        "count": len(recurring),
+    })
