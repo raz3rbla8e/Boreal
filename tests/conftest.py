@@ -24,7 +24,10 @@ def app(monkeypatch):
     yield app
 
     os.close(db_fd)
-    os.unlink(db_path)
+    try:
+        os.unlink(db_path)
+    except PermissionError:
+        pass
 
 
 @pytest.fixture()
