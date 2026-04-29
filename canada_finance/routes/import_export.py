@@ -18,6 +18,11 @@ from canada_finance.services.rules_engine import save_transactions
 import_export_bp = Blueprint("import_export", __name__)
 
 
+@import_export_bp.errorhandler(413)
+def too_large(e):
+    return jsonify({"error": "File too large — max 16 MB"}), 413
+
+
 @import_export_bp.route("/api/import", methods=["POST"])
 def api_import():
     db = get_db()

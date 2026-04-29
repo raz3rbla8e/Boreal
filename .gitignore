@@ -9,3 +9,4 @@ venv/
 dist/
 build/
 test_app.py
+tests/

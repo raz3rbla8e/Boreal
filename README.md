@@ -51,8 +51,8 @@ A free, private, self-hosted personal finance dashboard for Canadians. Runs loca
 
 ```bash
 # 1. Clone or download this repo
-git clone https://github.com/yourusername/canadafinance
-cd canadafinance
+git clone https://github.com/raz3rbla8e/Canada_finanace
+cd Canada_finanace
 
 # 2. Install (only needs Flask + PyYAML)
 pip install .

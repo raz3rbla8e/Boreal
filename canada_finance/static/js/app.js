@@ -1,3 +1,35 @@
+// ── SECURITY: HTML ESCAPING ───────────────────────────────────────────────────
+function escapeHtml(str) {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeAttr(str) {
+  return escapeHtml(str);
+}
+
+// ── API FETCH WRAPPER ─────────────────────────────────────────────────────────
+async function apiFetch(url, opts = {}) {
+  try {
+    const res = await fetch(url, opts);
+    if (!res.ok) {
+      let msg = `Server error (${res.status})`;
+      try { const body = await res.json(); if (body.error) msg = body.error; } catch(e) {}
+      toast(msg, 'error');
+      return null;
+    }
+    return await res.json();
+  } catch(e) {
+    toast('Network error — is the server running?', 'error');
+    return null;
+  }
+}
+
 let EXPENSE_CATS = [];
 let INCOME_CATS = [];
 let ALL_CATEGORIES = [];
@@ -8,7 +40,7 @@ let months = [], currentMonthIdx = 0, donutChart = null;
 let currentYear = new Date().getFullYear();
 
 async function loadCategories() {
-  ALL_CATEGORIES = await fetch('/api/categories').then(r=>r.json());
+  ALL_CATEGORIES = await apiFetch('/api/categories') || [];
   EXPENSE_CATS = ALL_CATEGORIES.filter(c=>c.type==='Expense').map(c=>c.name);
   INCOME_CATS = ALL_CATEGORIES.filter(c=>c.type==='Income').map(c=>c.name);
   EXPENSE_CATS.push('UNCATEGORIZED');
@@ -18,7 +50,7 @@ async function loadCategories() {
 function toggleTheme() {
   const dark = document.getElementById('theme-toggle').checked;
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
-  fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'},
+  apiFetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({theme: dark ? 'dark' : 'light'})});
 }
 
@@ -28,13 +60,12 @@ async function init() {
   await loadCategories();
 
   // Load settings
-  const settings = await fetch('/api/settings').then(r=>r.json());
+  const settings = await apiFetch('/api/settings') || {theme:'dark'};
   const dark = settings.theme !== 'light';
   document.getElementById('theme-toggle').checked = dark;
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
 
-  const res = await fetch('/api/months');
-  months = await res.json();
+  months = await apiFetch('/api/months') || [];
   if (!months.length) {
     document.getElementById('month-display').textContent = 'No data yet — import a CSV!';
     populateCatFilter();
@@ -65,10 +96,12 @@ function changeMonth(dir) {
 async function renderMonth() {
   const m = months[currentMonthIdx];
   document.getElementById('month-display').textContent = fmtMonth(m);
-  const [summary, txns] = await Promise.all([
-    fetch(`/api/summary?month=${m}`).then(r=>r.json()),
-    fetch(`/api/transactions?month=${m}`).then(r=>r.json()),
+  const [summary, txnData] = await Promise.all([
+    apiFetch(`/api/summary?month=${m}`),
+    apiFetch(`/api/transactions?month=${m}`),
   ]);
+  if (!summary || !txnData) return;
+  const txns = txnData.transactions || txnData;
   renderCards(summary, txns);
   renderCatList(summary.by_category);
   renderDonut(summary.by_category);
@@ -108,8 +141,8 @@ function renderCatList(cats) {
   document.getElementById('cat-list').innerHTML = cats.length ? cats.map(c => {
     const bPct = c.budget ? Math.min(c.total/c.budget*100,100).toFixed(0) : null;
     const bColor = c.budget ? (c.total>c.budget?'var(--red)':c.total>c.budget*.8?'var(--amber)':'var(--accent)') : 'var(--accent)';
-    return `<div class="cat-row" onclick="filterByCat('${c.category}')">
-      <span class="cat-name">${c.category}</span>
+    return `<div class="cat-row" onclick="filterByCat('${escapeAttr(c.category)}')">
+      <span class="cat-name">${escapeHtml(c.category)}</span>
       <div class="cat-bar-wrap"><div class="cat-bar" style="width:${(c.total/max*100).toFixed(0)}%;background:${bColor}"></div></div>
       ${c.budget ? `<span class="cat-budget ${c.total>c.budget?'over':''}">${Math.round(c.total/c.budget*100)}%</span>` : ''}
       <span class="cat-amt">${fmt(c.total)}</span>
@@ -132,15 +165,15 @@ function renderDonut(cats) {
 
 // ── RECURRING ─────────────────────────────────────────────────────────────────
 async function renderAverages() {
-  const data = await fetch('/api/averages').then(r=>r.json());
+  const data = await apiFetch('/api/averages') || [];
   const el = document.getElementById('averages-list');
   if (!data.length) { el.innerHTML = '<div class="empty">Not enough data yet</div>'; return; }
   const maxAvg = data[0].avg_monthly || 1;
   const n = data[0].months_seen;
   document.getElementById('avg-subtitle').textContent = `last ${n} month${n!==1?'s':''}`;
   el.innerHTML = data.map(r => `
-    <div class="cat-row" onclick="filterByCat('${r.category}')" style="cursor:pointer">
-      <span class="cat-name">${r.category}</span>
+    <div class="cat-row" onclick="filterByCat('${escapeAttr(r.category)}')" style="cursor:pointer">
+      <span class="cat-name">${escapeHtml(r.category)}</span>
       <div class="cat-bar-wrap"><div class="cat-bar" style="width:${(r.avg_monthly/maxAvg*100).toFixed(0)}%"></div></div>
       <span class="cat-amt">${fmt(r.avg_monthly)}<span style="color:var(--muted);font-size:10px">/mo</span></span>
     </div>`).join('');
@@ -149,10 +182,10 @@ async function renderAverages() {
 // ── RECENT TXNS ───────────────────────────────────────────────────────────────
 function renderRecentTxns(txns) {
   document.getElementById('recent-txns').innerHTML = txns.length
-    ? txns.map(t=>`<tr onclick="openEditModal(${JSON.stringify(t).replace(/"/g,'&quot;')})">
-        <td style="font-family:var(--mono);color:var(--muted);font-size:11px">${t.date}</td>
-        <td>${t.name}</td>
-        <td><span class="badge">${t.category}</span></td>
+    ? txns.map(t=>`<tr onclick="openEditModal(${escapeAttr(JSON.stringify(t))})">
+        <td style="font-family:var(--mono);color:var(--muted);font-size:11px">${escapeHtml(t.date)}</td>
+        <td>${escapeHtml(t.name)}</td>
+        <td><span class="badge">${escapeHtml(t.category)}</span></td>
         <td style="text-align:right" class="amt-expense">${fmt(t.amount)}</td>
       </tr>`).join('')
     : '<tr><td colspan="4" class="empty">No transactions</td></tr>';
@@ -172,42 +205,72 @@ async function loadTransactions() {
   const hiddenParam = showingHidden ? '&hidden=1' : '';
 
   const url = search
-    ? `/api/transactions?search=${encodeURIComponent(search)}&type=${encodeURIComponent(typ)}${hiddenParam}`
-    : `/api/transactions?month=${m}&type=${encodeURIComponent(typ)}&category=${encodeURIComponent(cat)}${hiddenParam}`;
+    ? `/api/transactions?search=${encodeURIComponent(search)}&type=${encodeURIComponent(typ)}${hiddenParam}&limit=50&offset=0`
+    : `/api/transactions?month=${m}&type=${encodeURIComponent(typ)}&category=${encodeURIComponent(cat)}${hiddenParam}&limit=50&offset=0`;
 
-  const txns = await fetch(url).then(r=>r.json());
+  const data = await apiFetch(url);
+  if (!data) return;
+  const txns = data.transactions || data;
+  const hasMore = data.has_more || false;
+  const total = data.total || txns.length;
   const tbody = document.getElementById('all-txns');
   const empty = document.getElementById('txn-empty');
+  const loadMoreBtn = document.getElementById('load-more-btn');
+
+  // Store current query for "Load More"
+  loadTransactions._lastUrl = url.replace(/&offset=\d+/, '').replace(/&limit=\d+/, '');
+  loadTransactions._currentOffset = txns.length;
 
   if (search) {
-    const total = txns.reduce((s,t)=>t.type==='Expense'?s+t.amount:s,0);
+    const expTotal = txns.reduce((s,t)=>t.type==='Expense'?s+t.amount:s,0);
     banner.style.display='block';
-    banner.innerHTML = `${txns.length} result${txns.length!==1?'s':''} for "<strong>${search}</strong>"` +
-      (total>0?` &nbsp;·&nbsp; ${fmt(total)} total`:'') +
+    banner.innerHTML = `${total} result${total!==1?'s':''} for "<strong>${escapeHtml(search)}</strong>"` +
+      (expTotal>0?` &nbsp;·&nbsp; ${fmt(expTotal)} total`:'') +
       ` &nbsp;<span style="cursor:pointer;color:var(--accent)" onclick="clearSearch()">✕ clear</span>`;
   } else { banner.style.display='none'; }
 
-  if (!txns.length) { tbody.innerHTML=''; empty.style.display='block'; empty.textContent = showingHidden ? 'No hidden transactions' : 'No transactions found'; return; }
+  if (!txns.length) { tbody.innerHTML=''; empty.style.display='block'; empty.textContent = showingHidden ? 'No hidden transactions' : 'No transactions found'; if(loadMoreBtn) loadMoreBtn.style.display='none'; return; }
   empty.style.display='none';
-  tbody.innerHTML = txns.map(t=>{
+  tbody.innerHTML = renderTxnRows(txns);
+  if (loadMoreBtn) loadMoreBtn.style.display = hasMore ? '' : 'none';
+}
+
+function renderTxnRows(txns) {
+  return txns.map(t=>{
     const actionBtn = showingHidden
       ? `<button class="btn-ghost btn-sm" style="font-size:11px;padding:3px 8px" onclick="event.stopPropagation();unhideTx(${t.id})">Unhide</button>`
       : `<button class="del-btn" onclick="event.stopPropagation();deleteTx(${t.id})">×</button>`;
-    return `<tr onclick="openEditModal(${JSON.stringify(t).replace(/"/g,'&quot;')})">
-    <td style="font-family:var(--mono);color:var(--muted);font-size:11px">${t.date}</td>
-    <td>${t.name}</td>
-    <td><span class="badge">${t.category}</span></td>
-    <td style="color:var(--muted);font-size:11px">${t.account}</td>
-    <td><span class="badge ${t.type.toLowerCase()}">${t.type}</span></td>
+    return `<tr onclick="openEditModal(${escapeAttr(JSON.stringify(t))})">
+    <td style="font-family:var(--mono);color:var(--muted);font-size:11px">${escapeHtml(t.date)}</td>
+    <td>${escapeHtml(t.name)}</td>
+    <td><span class="badge">${escapeHtml(t.category)}</span></td>
+    <td style="color:var(--muted);font-size:11px">${escapeHtml(t.account)}</td>
+    <td><span class="badge ${escapeAttr(t.type.toLowerCase())}">${escapeHtml(t.type)}</span></td>
     <td style="text-align:right" class="${t.type==='Income'?'amt-income':'amt-expense'}">${fmt(t.amount)}</td>
     <td>${actionBtn}</td>
   </tr>`;
   }).join('');
 }
 
+async function loadMoreTransactions() {
+  const offset = loadTransactions._currentOffset || 0;
+  const baseUrl = loadTransactions._lastUrl || '';
+  if (!baseUrl) return;
+  const url = `${baseUrl}&limit=50&offset=${offset}`;
+  const data = await apiFetch(url);
+  if (!data) return;
+  const txns = data.transactions || data;
+  const hasMore = data.has_more || false;
+  const tbody = document.getElementById('all-txns');
+  const loadMoreBtn = document.getElementById('load-more-btn');
+  tbody.innerHTML += renderTxnRows(txns);
+  loadTransactions._currentOffset = offset + txns.length;
+  if (loadMoreBtn) loadMoreBtn.style.display = hasMore ? '' : 'none';
+}
+
 async function deleteTx(id) {
   if (!confirm('Delete this transaction?')) return;
-  await fetch(`/api/delete/${id}`, {method:'DELETE'});
+  await apiFetch(`/api/delete/${id}`, {method:'DELETE'});
   toast('Deleted','success'); renderMonth(); loadTransactions();
 }
 function filterByCat(cat) {
@@ -228,7 +291,8 @@ function populateCatFilter() {
 function changeYear(dir) { currentYear += dir; renderYear(); }
 async function renderYear() {
   document.getElementById('year-display').textContent = currentYear;
-  const data = await fetch(`/api/year/${currentYear}`).then(r=>r.json());
+  const data = await apiFetch(`/api/year/${currentYear}`);
+  if (!data) return;
   const maxVal = Math.max(...data.months.map(m=>Math.max(m.income,m.expenses)), 1);
 
   document.getElementById('year-cards').innerHTML = `
@@ -257,7 +321,7 @@ async function renderYear() {
   document.getElementById('year-cats').innerHTML = data.top_categories.length
     ? data.top_categories.map(c=>`
       <div class="cat-row">
-        <span class="cat-name">${c.category}</span>
+        <span class="cat-name">${escapeHtml(c.category)}</span>
         <div class="cat-bar-wrap"><div class="cat-bar" style="width:${(c.total/maxCat*100).toFixed(0)}%"></div></div>
         <span class="cat-amt">${fmt(c.total)}</span>
       </div>`).join('')
@@ -300,9 +364,10 @@ async function addCategory() {
   const icon = document.getElementById('new-cat-icon').value.trim();
   const type = document.getElementById('new-cat-type').value;
   if (!name) return toast('Enter a category name','error');
-  const res = await fetch('/api/categories', {method:'POST',
+  const res = await apiFetch('/api/categories', {method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({name, type, icon})}).then(r=>r.json());
+    body: JSON.stringify({name, type, icon})});
+  if (!res) return;
   if (res.ok) {
     document.getElementById('new-cat-name').value = '';
     document.getElementById('new-cat-icon').value = '';
@@ -318,9 +383,10 @@ async function renameCategory(id, oldName, oldIcon) {
   const newName = prompt('Rename category:', oldName);
   if (!newName || newName.trim() === oldName) return;
   const newIcon = prompt('Icon (emoji, optional):', oldIcon) || '';
-  const res = await fetch(`/api/categories/${id}`, {method:'PATCH',
+  const res = await apiFetch(`/api/categories/${id}`, {method:'PATCH',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({name: newName.trim(), icon: newIcon.trim()})}).then(r=>r.json());
+    body: JSON.stringify({name: newName.trim(), icon: newIcon.trim()})});
+  if (!res) return;
   if (res.ok) {
     await loadCategories();
     loadCategoryList();
@@ -331,13 +397,15 @@ async function renameCategory(id, oldName, oldIcon) {
 }
 
 async function deleteCategory(id, name, type) {
-  const res = await fetch(`/api/categories/${id}`, {method:'DELETE'}).then(r=>r.json());
+  const res = await apiFetch(`/api/categories/${id}`, {method:'DELETE'});
+  if (!res) return;
   if (res.error === 'in_use') {
     const sameCats = ALL_CATEGORIES.filter(c=>c.type===type && c.name!==name).map(c=>c.name);
     const target = prompt(`${res.count} transactions use "${name}".\nReassign them to which category?\n\nOptions: ${sameCats.join(', ')}`);
     if (!target) return;
     if (!sameCats.includes(target)) return toast('Invalid category','error');
-    const res2 = await fetch(`/api/categories/${id}?reassign=${encodeURIComponent(target)}`, {method:'DELETE'}).then(r=>r.json());
+    const res2 = await apiFetch(`/api/categories/${id}?reassign=${encodeURIComponent(target)}`, {method:'DELETE'});
+    if (!res2) return;
     if (res2.ok) {
       await loadCategories();
       loadCategoryList();
@@ -356,12 +424,12 @@ async function deleteCategory(id, name, type) {
 }
 
 async function loadBudgets() {
-  const budgets = await fetch('/api/budgets').then(r=>r.json());
+  const budgets = await apiFetch('/api/budgets') || [];
   document.getElementById('budget-list').innerHTML = budgets.length
     ? budgets.map(b=>`<div class="settings-row">
-        <div><div class="settings-label">${b.category}</div>
+        <div><div class="settings-label">${escapeHtml(b.category)}</div>
           <div class="settings-sub">${fmt(b.monthly_limit)}/month</div></div>
-        <button class="btn btn-red btn-sm" onclick="deleteBudget('${b.category}')">Remove</button>
+        <button class="btn btn-red btn-sm" onclick="deleteBudget('${escapeAttr(b.category)}')">Remove</button>
       </div>`).join('')
     : '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">No budgets set</div>';
 }
@@ -378,30 +446,30 @@ async function saveBudget() {
   const cat = document.getElementById('budget-cat').value;
   const amt = document.getElementById('budget-amt').value;
   if (!cat || !amt) return toast('Select category and amount','error');
-  await fetch('/api/budgets', {method:'POST', headers:{'Content-Type':'application/json'},
+  await apiFetch('/api/budgets', {method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({category:cat, amount:parseFloat(amt)})});
   document.getElementById('budget-amt').value='';
   loadBudgets(); toast('Budget set ✓','success');
 }
 
 async function deleteBudget(cat) {
-  await fetch(`/api/budgets/${encodeURIComponent(cat)}`, {method:'DELETE'});
+  await apiFetch(`/api/budgets/${encodeURIComponent(cat)}`, {method:'DELETE'});
   loadBudgets(); toast('Removed','success');
 }
 
 async function loadLearned() {
-  const rows = await fetch('/api/learned').then(r=>r.json());
+  const rows = await apiFetch('/api/learned') || [];
   document.getElementById('learned-list').innerHTML = rows.length
     ? rows.map(r=>`<div class="settings-row">
-        <div><div class="settings-label" style="font-family:var(--mono);font-size:12px">${r.keyword}</div>
-          <div class="settings-sub">→ ${r.category}</div></div>
-        <button class="btn btn-ghost btn-sm" onclick="deleteLearned('${r.keyword.replace(/'/g,"\\'")}')">Remove</button>
+        <div><div class="settings-label" style="font-family:var(--mono);font-size:12px">${escapeHtml(r.keyword)}</div>
+          <div class="settings-sub">→ ${escapeHtml(r.category)}</div></div>
+        <button class="btn btn-ghost btn-sm" onclick="deleteLearned('${escapeAttr(r.keyword)}')">Remove</button>
       </div>`).join('')
     : '<div style="color:var(--muted);font-size:12px">None yet — edit a transaction category to start learning</div>';
 }
 
 async function deleteLearned(keyword) {
-  await fetch(`/api/learned/${encodeURIComponent(keyword)}`, {method:'DELETE'});
+  await apiFetch(`/api/learned/${encodeURIComponent(keyword)}`, {method:'DELETE'});
   loadLearned(); toast('Removed','success');
 }
 
@@ -415,7 +483,7 @@ function updateCatOptions(selId, typeId) {
   const type = document.getElementById(typeId).value;
   const sel = document.getElementById(selId);
   const cats = type === 'Income' ? INCOME_CATS : EXPENSE_CATS;
-  sel.innerHTML = cats.map(c=>`<option>${c}</option>`).join('');
+  sel.innerHTML = cats.map(c=>`<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
 }
 
 function openAddModal() {
@@ -452,11 +520,11 @@ async function submitAdd() {
     notes: document.getElementById('f-notes').value.trim(),
   };
   if (!body.date||!body.name||!body.amount) return toast('Fill required fields','error');
-  const res = await fetch('/api/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-  const data = await res.json();
+  const data = await apiFetch('/api/add', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if (!data) return;
   if (data.ok) {
     toast('Added ✓','success'); closeModal('add-modal');
-    const mr = await fetch('/api/months').then(r=>r.json()); months=mr;
+    months = await apiFetch('/api/months') || [];
     const idx = months.indexOf(body.date.slice(0,7)); if(idx!==-1) currentMonthIdx=idx;
     renderMonth();
     ['f-name','f-amount','f-notes'].forEach(id=>document.getElementById(id).value='');
@@ -474,8 +542,8 @@ async function submitEdit() {
     account: document.getElementById('e-account').value,
     notes: document.getElementById('e-notes').value.trim(),
   };
-  const res = await fetch(`/api/update/${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-  const data = await res.json();
+  const data = await apiFetch(`/api/update/${id}`, {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+  if (!data) return;
   if (data.ok) {
     const extra = data.retro_fixed>0 ? ` · fixed ${data.retro_fixed} other${data.retro_fixed>1?'s':''}` : '';
     toast(`Saved ✓${extra}`,'success'); closeModal('edit-modal'); renderMonth(); loadTransactions();
@@ -484,7 +552,7 @@ async function submitEdit() {
 
 async function deleteFromEdit() {
   if (!confirm('Delete this transaction?')) return;
-  await fetch(`/api/delete/${document.getElementById('e-id').value}`, {method:'DELETE'});
+  await apiFetch(`/api/delete/${document.getElementById('e-id').value}`, {method:'DELETE'});
   toast('Deleted','success'); closeModal('edit-modal'); renderMonth(); loadTransactions();
 }
 
@@ -515,7 +583,8 @@ async function handleFiles(files) {
   for (const f of files) {
     const detectFd = new FormData();
     detectFd.append('file', f);
-    const det = await fetch('/api/detect-csv', {method:'POST', body:detectFd}).then(r=>r.json());
+    const det = await apiFetch('/api/detect-csv', {method:'POST', body:detectFd});
+    if (!det) continue;
     if (det.detected) {
       knownFd.append('files', f);
       hasKnown = true;
@@ -526,18 +595,19 @@ async function handleFiles(files) {
 
   // Import known files normally
   if (hasKnown) {
-    const data = await fetch('/api/import', {method:'POST', body:knownFd}).then(r=>r.json());
+    const data = await apiFetch('/api/import', {method:'POST', body:knownFd});
+    if (!data) return;
     const resultsHtml = data.map(r => {
       const staleWarn = isStaleConfig(r.last_verified)
-        ? `<div style="color:var(--amber);font-size:10px;font-family:var(--mono)">⚠ config last verified ${r.last_verified}</div>` : '';
+        ? `<div style="color:var(--amber);font-size:10px;font-family:var(--mono)">⚠ config last verified ${escapeHtml(r.last_verified)}</div>` : '';
       return `<div class="result-row">
-        <div style="flex:1"><div>${r.file}</div><div class="result-bank">${r.bank}</div>${staleWarn}</div>
+        <div style="flex:1"><div>${escapeHtml(r.file)}</div><div class="result-bank">${escapeHtml(r.bank)}</div>${staleWarn}</div>
         <div style="color:var(--accent);font-family:var(--mono)">+${r.added}</div>
         <div style="color:var(--muted);font-size:11px">${r.dupes} dupes skipped</div>
       </div>`;
     }).join('');
     document.getElementById('import-results').innerHTML = resultsHtml;
-    const mr = await fetch('/api/months').then(r=>r.json()); months=mr;
+    months = await apiFetch('/api/months') || [];
     if (months.length) { currentMonthIdx=0; renderMonth(); }
     toast(`Imported ${data.reduce((s,r)=>s+r.added,0)} transactions`,'success');
   }
@@ -558,9 +628,9 @@ function openCsvWizard(info) {
 
   // Build preview table
   const table = document.getElementById('wizard-preview-table');
-  const ths = info.headers.map(h => `<th>${h}</th>`).join('');
+  const ths = info.headers.map(h => `<th>${escapeHtml(h)}</th>`).join('');
   const rows = info.preview.map(r =>
-    `<tr>${info.headers.map(h => `<td>${r[h]||''}</td>`).join('')}</tr>`
+    `<tr>${info.headers.map(h => `<td>${escapeHtml(r[h]||'')}</td>`).join('')}</tr>`
   ).join('');
   table.innerHTML = `<thead><tr>${ths}</tr></thead><tbody>${rows}</tbody>`;
 
@@ -569,7 +639,7 @@ function openCsvWizard(info) {
   selects.forEach(id => {
     const sel = document.getElementById(id);
     sel.innerHTML = '<option value="">— select —</option>' +
-      info.headers.map(h => `<option value="${h}">${h}</option>`).join('');
+      info.headers.map(h => `<option value="${escapeAttr(h)}">${escapeHtml(h)}</option>`).join('');
   });
 
   // Auto-guess columns
@@ -610,18 +680,19 @@ function toggleAmountMode() {
 async function wizardPreview() {
   const mapping = getWizardMapping();
   if (!mapping) return;
-  const res = await fetch('/api/preview-parse', {method:'POST',
+  const res = await apiFetch('/api/preview-parse', {method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({raw_text: wizardState.raw_text, mapping})
-  }).then(r=>r.json());
+  });
+  if (!res) return;
   const el = document.getElementById('wizard-preview-parsed');
   if (res.transactions && res.transactions.length) {
     el.innerHTML = `<div style="font-size:11px;color:var(--muted);margin-bottom:6px">
       ${res.total} transaction${res.total!==1?'s':''} found (showing first ${res.transactions.length})</div>` +
       res.transactions.map(t => `<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
-        <span style="color:var(--muted);font-family:var(--mono);width:80px">${t.date}</span>
-        <span style="flex:1">${t.name}</span>
-        <span class="badge ${t.type.toLowerCase()}">${t.type}</span>
+        <span style="color:var(--muted);font-family:var(--mono);width:80px">${escapeHtml(t.date)}</span>
+        <span style="flex:1">${escapeHtml(t.name)}</span>
+        <span class="badge ${escapeAttr(t.type.toLowerCase())}">${escapeHtml(t.type)}</span>
         <span class="${t.type==='Income'?'amt-income':'amt-expense'}" style="font-family:var(--mono)">${fmt(t.amount)}</span>
       </div>`).join('');
   } else {
@@ -656,22 +727,23 @@ async function wizardSaveAndImport() {
   // Pick unique headers from the CSV for detection
   mapping.detection_headers = wizardState.headers.slice(0, 3);
   // Save config
-  const saveRes = await fetch('/api/save-bank-config', {method:'POST',
-    headers:{'Content-Type':'application/json'}, body:JSON.stringify(mapping)}).then(r=>r.json());
-  if (!saveRes.ok) { toast(saveRes.error||'Error saving config','error'); return; }
+  const saveRes = await apiFetch('/api/save-bank-config', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(mapping)});
+  if (!saveRes || !saveRes.ok) { toast(saveRes?.error||'Error saving config','error'); return; }
   // Re-import the file using the new config
   const fd = new FormData();
   fd.append('files', wizardState.file);
-  const data = await fetch('/api/import', {method:'POST', body:fd}).then(r=>r.json());
+  const data = await apiFetch('/api/import', {method:'POST', body:fd});
+  if (!data) return;
   const prev = document.getElementById('import-results').innerHTML;
   document.getElementById('import-results').innerHTML = prev + data.map(r=>`
     <div class="result-row">
-      <div style="flex:1"><div>${r.file}</div><div class="result-bank">${r.bank} <span style="color:var(--accent);font-size:10px">(new config)</span></div></div>
+      <div style="flex:1"><div>${escapeHtml(r.file)}</div><div class="result-bank">${escapeHtml(r.bank)} <span style="color:var(--accent);font-size:10px">(new config)</span></div></div>
       <div style="color:var(--accent);font-family:var(--mono)">+${r.added}</div>
       <div style="color:var(--muted);font-size:11px">${r.dupes} dupes skipped</div>
     </div>`).join('');
   closeModal('csv-wizard-modal');
-  const mr = await fetch('/api/months').then(r=>r.json()); months=mr;
+  months = await apiFetch('/api/months') || [];
   if (months.length) { currentMonthIdx=0; renderMonth(); }
   toast(`Config saved! Imported ${data.reduce((s,r)=>s+r.added,0)} transactions`,'success');
   // Process next unknown file in queue
@@ -684,7 +756,7 @@ async function wizardSaveAndImport() {
 let showingHidden = false;
 
 async function loadRules() {
-  const rules = await fetch('/api/rules').then(r=>r.json());
+  const rules = await apiFetch('/api/rules') || [];
   const el = document.getElementById('rules-list');
   if (!rules.length) {
     el.innerHTML = '<div style="color:var(--muted);font-size:12px;font-family:var(--mono)">No rules — add one or load a template</div>';
@@ -695,12 +767,12 @@ async function loadRules() {
       equals:'equals', not_equals:'NOT equals', starts_with:'starts with', ends_with:'ends with',
       greater_than:'>', less_than:'<'};
     const condText = r.conditions.map(c =>
-      `${c.field} ${opLabels[c.operator]||c.operator} "${c.value}"`
+      `${escapeHtml(c.field)} ${opLabels[c.operator]||escapeHtml(c.operator)} "${escapeHtml(c.value)}"`
     ).join(' AND ');
     const enabledCheck = r.enabled ? 'checked' : '';
     let actionInfo = '';
     if (r.action === 'label' && r.action_value) {
-      try { const v = JSON.parse(r.action_value); actionInfo = ` → ${v.type||''} / ${v.category||''}`; } catch(e) {}
+      try { const v = JSON.parse(r.action_value); actionInfo = ` → ${escapeHtml(v.type||'')} / ${escapeHtml(v.category||'')}`; } catch(e) {}
     }
     return `<div class="rule-row" data-rule-id="${r.id}">
       <div class="rule-priority" style="display:flex;flex-direction:column;align-items:center;gap:2px;flex-shrink:0;min-width:28px">
@@ -715,19 +787,19 @@ async function loadRules() {
         <span class="toggle-slider"></span>
       </label>
       <div class="rule-info">
-        <div class="rule-name">${r.name}
-          <span class="rule-action-badge ${r.action}">${r.action}</span>${actionInfo}
+        <div class="rule-name">${escapeHtml(r.name)}
+          <span class="rule-action-badge ${escapeAttr(r.action)}">${escapeHtml(r.action)}</span>${actionInfo}
         </div>
         <div class="rule-conditions-summary">${condText}</div>
       </div>
-      <button class="btn-icon" onclick='editRule(${JSON.stringify(r).replace(/'/g,"&#39;")})'>✏️</button>
+      <button class="btn-icon" onclick='editRule(${escapeAttr(JSON.stringify(r))})'>✏️</button>
       <button class="btn-icon" onclick="deleteRule(${r.id})">🗑️</button>
     </div>`;
   }).join('');
 }
 
 async function toggleRule(id, enabled) {
-  await fetch(`/api/rules/${id}`, {method:'PATCH',
+  await apiFetch(`/api/rules/${id}`, {method:'PATCH',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({enabled: enabled ? 1 : 0})});
   toast(enabled ? 'Rule enabled' : 'Rule disabled', 'success');
@@ -735,7 +807,7 @@ async function toggleRule(id, enabled) {
 
 async function deleteRule(id) {
   if (!confirm('Delete this rule?')) return;
-  await fetch(`/api/rules/${id}`, {method:'DELETE'});
+  await apiFetch(`/api/rules/${id}`, {method:'DELETE'});
   loadRules();
   toast('Rule deleted', 'success');
 }
@@ -750,7 +822,7 @@ async function moveRule(id, direction) {
   if (newIdx < 0 || newIdx >= ids.length) return;
   // Swap
   [ids[idx], ids[newIdx]] = [ids[newIdx], ids[idx]];
-  await fetch('/api/rules/reorder', {method:'POST',
+  await apiFetch('/api/rules/reorder', {method:'POST',
     headers:{'Content-Type':'application/json'},
     body: JSON.stringify({order: ids})});
   loadRules();
@@ -867,7 +939,7 @@ function updateRuleCatOptions() {
   const type = document.getElementById('rule-label-type').value;
   const sel = document.getElementById('rule-label-category');
   const cats = type === 'Income' ? INCOME_CATS : EXPENSE_CATS;
-  sel.innerHTML = cats.filter(c => c !== 'UNCATEGORIZED').map(c => `<option>${c}</option>`).join('');
+  sel.innerHTML = cats.filter(c => c !== 'UNCATEGORIZED').map(c => `<option value="${escapeAttr(c)}">${escapeHtml(c)}</option>`).join('');
 }
 
 function getRuleFormData() {
@@ -897,13 +969,15 @@ async function saveRule() {
   if (!data) return;
   const editId = document.getElementById('rule-edit-id').value;
   if (editId) {
-    const res = await fetch(`/api/rules/${editId}`, {method:'PATCH',
-      headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)}).then(r=>r.json());
+    const res = await apiFetch(`/api/rules/${editId}`, {method:'PATCH',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    if (!res) return;
     if (res.ok) { toast('Rule updated ✓', 'success'); closeModal('rule-modal'); loadRules(); }
     else toast(res.error||'Error', 'error');
   } else {
-    const res = await fetch('/api/rules', {method:'POST',
-      headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)}).then(r=>r.json());
+    const res = await apiFetch('/api/rules', {method:'POST',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+    if (!res) return;
     if (res.ok) { toast('Rule created ✓', 'success'); closeModal('rule-modal'); loadRules(); }
     else toast(res.error||'Error', 'error');
   }
@@ -912,8 +986,9 @@ async function saveRule() {
 async function testRule() {
   const data = getRuleFormData();
   if (!data) return;
-  const res = await fetch('/api/rules/test', {method:'POST',
-    headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)}).then(r=>r.json());
+  const res = await apiFetch('/api/rules/test', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)});
+  if (!res) return;
   const el = document.getElementById('rule-test-results');
   el.style.display = 'block';
   if (res.count === 0) {
@@ -923,16 +998,17 @@ async function testRule() {
   el.innerHTML = `<div style="font-size:12px;color:var(--accent);margin-bottom:8px;font-family:var(--mono)">
     This rule would affect ${res.count} transaction${res.count!==1?'s':''}</div>` +
     res.transactions.map(t => `<div style="display:flex;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:11px">
-      <span style="color:var(--muted);font-family:var(--mono);width:75px;flex-shrink:0">${t.date}</span>
-      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.name}</span>
-      <span class="badge ${t.type.toLowerCase()}" style="font-size:10px">${t.type}</span>
+      <span style="color:var(--muted);font-family:var(--mono);width:75px;flex-shrink:0">${escapeHtml(t.date)}</span>
+      <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.name)}</span>
+      <span class="badge ${escapeAttr(t.type.toLowerCase())}" style="font-size:10px">${escapeHtml(t.type)}</span>
       <span style="font-family:var(--mono);width:70px;text-align:right">${fmt(t.amount)}</span>
     </div>`).join('');
 }
 
 async function applyAllRules() {
   if (!confirm('Apply all enabled rules to every existing transaction? This will hide/label matching transactions.')) return;
-  const res = await fetch('/api/rules/apply-all', {method:'POST'}).then(r=>r.json());
+  const res = await apiFetch('/api/rules/apply-all', {method:'POST'});
+  if (!res) return;
   toast(`Rules applied — ${res.affected} transaction${res.affected!==1?'s':''} affected`, 'success');
   if (res.affected > 0 && months.length) renderMonth();
   updateHiddenCount();
@@ -940,7 +1016,7 @@ async function applyAllRules() {
 
 async function openTemplateModal() {
   document.getElementById('template-modal').classList.add('open');
-  const templates = await fetch('/api/rule-templates').then(r=>r.json());
+  const templates = await apiFetch('/api/rule-templates') || [];
   const el = document.getElementById('template-list');
   if (!templates.length) {
     el.innerHTML = '<div class="empty">No templates found</div>';
@@ -948,17 +1024,18 @@ async function openTemplateModal() {
   }
   el.innerHTML = templates.map(t => `<div class="settings-row">
     <div style="flex:1">
-      <div class="settings-label">${t.name}</div>
-      <div class="settings-sub">${t.description} · ${t.rule_count} rule${t.rule_count!==1?'s':''}</div>
+      <div class="settings-label">${escapeHtml(t.name)}</div>
+      <div class="settings-sub">${escapeHtml(t.description)} · ${t.rule_count} rule${t.rule_count!==1?'s':''}</div>
     </div>
-    <button class="btn btn-sm" onclick="loadTemplate('${t.file.replace(/'/g,"\\'")}', '${t.name.replace(/'/g,"\\'")}', ${t.rule_count})">Load</button>
+    <button class="btn btn-sm" onclick="loadTemplate('${escapeAttr(t.file)}', '${escapeAttr(t.name)}', ${t.rule_count})">Load</button>
   </div>`).join('');
 }
 
 async function loadTemplate(file, name, count) {
   if (!confirm(`Load "${name}"? This will add ${count} rule${count!==1?'s':''} to your list. Existing rules are not affected.`)) return;
-  const res = await fetch('/api/rule-templates/load', {method:'POST',
-    headers:{'Content-Type':'application/json'}, body:JSON.stringify({file})}).then(r=>r.json());
+  const res = await apiFetch('/api/rule-templates/load', {method:'POST',
+    headers:{'Content-Type':'application/json'}, body:JSON.stringify({file})});
+  if (!res) return;
   if (res.ok) {
     toast(`Loaded ${res.loaded} rule${res.loaded!==1?'s':''} from ${name} ✓`, 'success');
     closeModal('template-modal');
@@ -969,7 +1046,8 @@ async function loadTemplate(file, name, count) {
 // ── HIDDEN TRANSACTIONS ──────────────────────────────────────────────────────
 
 async function updateHiddenCount() {
-  const res = await fetch('/api/transactions/hidden-count').then(r=>r.json());
+  const res = await apiFetch('/api/transactions/hidden-count');
+  if (!res) return;
   const badge = document.getElementById('hidden-count-badge');
   const btn = document.getElementById('hidden-toggle');
   badge.textContent = res.count;
@@ -997,7 +1075,7 @@ function toggleHiddenView() {
 }
 
 async function unhideTx(id) {
-  await fetch(`/api/transactions/${id}/unhide`, {method:'PATCH'});
+  await apiFetch(`/api/transactions/${id}/unhide`, {method:'PATCH'});
   toast('Transaction unhidden ✓', 'success');
   loadTransactions();
   updateHiddenCount();
@@ -1005,7 +1083,7 @@ async function unhideTx(id) {
 }
 
 async function hideTx(id) {
-  await fetch(`/api/transactions/${id}/hide`, {method:'PATCH'});
+  await apiFetch(`/api/transactions/${id}/hide`, {method:'PATCH'});
   toast('Transaction hidden ✓', 'success');
   loadTransactions();
   updateHiddenCount();

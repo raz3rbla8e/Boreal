@@ -14,6 +14,8 @@ def api_transactions():
     typ = request.args.get("type", "")
     search = request.args.get("search", "").strip()
     show_hidden = request.args.get("hidden", "0") == "1"
+    limit = request.args.get("limit", type=int)
+    offset = request.args.get("offset", 0, type=int)
     db = get_db()
     hidden_filter = "hidden=1" if show_hidden else "hidden=0"
     if search:
@@ -35,8 +37,22 @@ def api_transactions():
             q += " AND type=?"
             params.append(typ)
         q += " ORDER BY date DESC, id DESC"
-    rows = db.execute(q, params).fetchall()
-    return jsonify([dict(r) for r in rows])
+
+    if limit is not None:
+        # Count total before limiting
+        count_q = f"SELECT COUNT(*) as c FROM ({q})"
+        total = db.execute(count_q, params).fetchone()["c"]
+        q += " LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+        rows = db.execute(q, params).fetchall()
+        return jsonify({
+            "transactions": [dict(r) for r in rows],
+            "has_more": offset + len(rows) < total,
+            "total": total,
+        })
+    else:
+        rows = db.execute(q, params).fetchall()
+        return jsonify([dict(r) for r in rows])
 
 
 @transactions_bp.route("/api/add", methods=["POST"])
