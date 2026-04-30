@@ -59,6 +59,169 @@ const PALETTE = ["#6ee7b7","#f59e0b","#60a5fa","#a78bfa","#f87171","#34d399",
 let months = [], currentMonthIdx = 0, donutChart = null;
 let currentYear = new Date().getFullYear();
 
+// ── DASHBOARD LAYOUT CUSTOMIZATION ────────────────────────────────────────────
+const DEFAULT_PANELS = [
+  {id: 'spending-by-category', label: 'Spending by Category', visible: true},
+  {id: 'donut-chart', label: 'Breakdown Chart', visible: true},
+  {id: 'averages', label: 'Monthly Averages', visible: true},
+  {id: 'recent-txns', label: 'Recent Transactions', visible: true},
+  {id: 'recurring', label: 'Recurring & Subscriptions', visible: true},
+];
+let dashboardLayout = null;
+
+function getDashboardLayout() {
+  return dashboardLayout || DEFAULT_PANELS.map(p => ({...p}));
+}
+
+function loadDashboardLayout(settings) {
+  try {
+    if (settings && settings.dashboard_layout) {
+      const saved = JSON.parse(settings.dashboard_layout);
+      if (Array.isArray(saved) && saved.length) {
+        const savedIds = new Set(saved.map(p => p.id));
+        const merged = [...saved];
+        DEFAULT_PANELS.forEach(dp => { if (!savedIds.has(dp.id)) merged.push({...dp}); });
+        dashboardLayout = merged.filter(p => DEFAULT_PANELS.some(dp => dp.id === p.id));
+        return;
+      }
+    }
+  } catch(e) {}
+  dashboardLayout = null;
+}
+
+function applyDashboardLayout() {
+  const layout = getDashboardLayout();
+  const container = document.getElementById('dashboard-panels');
+  if (!container) return;
+  layout.forEach(p => {
+    const panel = container.querySelector(`[data-panel-id="${p.id}"]`);
+    if (panel) {
+      container.appendChild(panel);
+      if (p.visible) panel.classList.remove('panel-hidden');
+      else panel.classList.add('panel-hidden');
+    }
+  });
+}
+
+function isPanelVisible(panelId) {
+  const layout = getDashboardLayout();
+  const p = layout.find(x => x.id === panelId);
+  return p ? p.visible : true;
+}
+
+function saveDashboardLayout(layout) {
+  dashboardLayout = layout;
+  apiFetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({dashboard_layout: JSON.stringify(layout)})});
+}
+
+function openCustomizeModal() {
+  renderCustomizeList('customize-panel-list');
+  document.getElementById('customize-modal').classList.add('open');
+}
+
+function renderCustomizeList(containerId) {
+  const layout = getDashboardLayout();
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.innerHTML = layout.map((p, i) => `
+    <div class="customize-item" draggable="true" data-panel-id="${escapeAttr(p.id)}">
+      <span class="drag-handle">&#x2807;</span>
+      <div class="customize-arrows">
+        <button class="btn-icon" onclick="movePanelInList('${containerId}',${i},-1)" ${i===0?'disabled style="opacity:.3"':''}>&#x25B2;</button>
+        <button class="btn-icon" onclick="movePanelInList('${containerId}',${i},1)" ${i===layout.length-1?'disabled style="opacity:.3"':''}>&#x25BC;</button>
+      </div>
+      <span class="customize-label">${escapeHtml(p.label)}</span>
+      <label class="toggle" onclick="event.stopPropagation()">
+        <input type="checkbox" ${p.visible ? 'checked' : ''} onchange="togglePanelVisibility('${escapeAttr(p.id)}',this.checked)">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>`).join('');
+  initCustomizeDragDrop(el);
+}
+
+function initCustomizeDragDrop(container) {
+  let dragEl = null;
+  let dropped = false;
+  container.querySelectorAll('.customize-item').forEach(item => {
+    item.addEventListener('dragstart', e => {
+      dragEl = item; dropped = false; item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      container.querySelectorAll('.customize-item').forEach(i => i.classList.remove('drag-over'));
+      if (dropped) onDragReorder(container);
+      dragEl = null; dropped = false;
+    });
+    item.addEventListener('dragover', e => {
+      e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+      if (item !== dragEl) item.classList.add('drag-over');
+    });
+    item.addEventListener('dragleave', () => item.classList.remove('drag-over'));
+    item.addEventListener('drop', e => {
+      e.preventDefault();
+      if (dragEl && dragEl !== item) {
+        const items = [...container.querySelectorAll('.customize-item')];
+        const from = items.indexOf(dragEl), to = items.indexOf(item);
+        if (from < to) item.after(dragEl); else item.before(dragEl);
+        dropped = true;
+      }
+      container.querySelectorAll('.customize-item').forEach(i => i.classList.remove('drag-over'));
+    });
+  });
+}
+
+function onDragReorder(container) {
+  const layout = [...container.querySelectorAll('.customize-item')].map(item => ({
+    id: item.dataset.panelId,
+    label: DEFAULT_PANELS.find(p => p.id === item.dataset.panelId)?.label || '',
+    visible: item.querySelector('input[type="checkbox"]').checked
+  }));
+  saveDashboardLayout(layout);
+  applyDashboardLayout();
+  refreshAllCustomizeLists();
+}
+
+function movePanelInList(containerId, idx, dir) {
+  const layout = getDashboardLayout();
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= layout.length) return;
+  [layout[idx], layout[newIdx]] = [layout[newIdx], layout[idx]];
+  saveDashboardLayout(layout);
+  applyDashboardLayout();
+  refreshAllCustomizeLists();
+}
+
+function togglePanelVisibility(panelId, visible) {
+  const layout = getDashboardLayout();
+  const p = layout.find(x => x.id === panelId);
+  if (p) p.visible = visible;
+  saveDashboardLayout(layout);
+  applyDashboardLayout();
+  if (visible && months.length) {
+    if (panelId === 'averages') renderAverages();
+    if (panelId === 'recurring') renderRecurring();
+  }
+  refreshAllCustomizeLists();
+}
+
+function refreshAllCustomizeLists() {
+  ['customize-panel-list','settings-panel-list'].forEach(id => {
+    if (document.getElementById(id)) renderCustomizeList(id);
+  });
+}
+
+function resetDashboardLayout() {
+  dashboardLayout = null;
+  saveDashboardLayout(DEFAULT_PANELS.map(p => ({...p})));
+  applyDashboardLayout();
+  refreshAllCustomizeLists();
+  toast('Dashboard reset to default \u2713','success');
+  if (months.length) { renderAverages(); renderRecurring(); }
+}
+
 async function loadCategories() {
   ALL_CATEGORIES = await apiFetch('/api/categories') || [];
   EXPENSE_CATS = ALL_CATEGORIES.filter(c=>c.type==='Expense').map(c=>c.name);
@@ -186,6 +349,7 @@ async function init() {
   const dark = settings.theme !== 'light';
   document.getElementById('theme-toggle').checked = dark;
   document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+  loadDashboardLayout(settings);
 
   months = await apiFetch('/api/months') || [];
   if (!months.length) {
@@ -202,6 +366,7 @@ async function init() {
   }
   document.getElementById('empty-state').style.display = 'none';
   document.getElementById('dashboard-content').style.display = '';
+  applyDashboardLayout();
   currentMonthIdx = 0;
   document.getElementById('f-date').value = new Date().toISOString().slice(0,10);
   populateCatFilter();
@@ -235,8 +400,8 @@ async function renderMonth() {
   renderCatList(summary.by_category);
   renderDonut(summary.by_category);
   renderRecentTxns(txns.filter(t=>t.type==='Expense').slice(0,6));
-  renderAverages();
-  renderRecurring();
+  if (isPanelVisible('averages')) renderAverages();
+  if (isPanelVisible('recurring')) renderRecurring();
   if (document.getElementById('sec-transactions').classList.contains('active')) loadTransactions();
 }
 
@@ -577,6 +742,7 @@ async function renderYear() {
 
 // ── SETTINGS ──────────────────────────────────────────────────────────────────
 async function loadSettings() {
+  renderCustomizeList('settings-panel-list');
   loadCategoryList();
   loadBudgets();
   loadLearned();
@@ -1375,6 +1541,7 @@ async function refreshDashboard() {
   if (months.length) {
     document.getElementById('empty-state').style.display = 'none';
     document.getElementById('dashboard-content').style.display = '';
+    applyDashboardLayout();
     currentMonthIdx = 0;
     renderMonth();
   }

@@ -97,6 +97,9 @@
     <button class="month-btn" id="month-prev" onclick="changeMonth(-1)">←</button>
     <div class="month-label" id="month-display">—</div>
     <button class="month-btn" id="month-next" onclick="changeMonth(1)">→</button>
+    <button class="btn-icon customize-btn" id="dashboard-customize-btn" onclick="openCustomizeModal()" title="Customize dashboard layout">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg>
+    </button>
   </div>
   <div class="cards">
     <div class="card">
@@ -120,35 +123,33 @@
       <div class="card-sub" id="card-rate-sub">of income saved</div>
     </div>
   </div>
-  <div class="grid2">
-    <div class="panel">
+  <div id="dashboard-panels">
+    <div class="panel" data-panel-id="spending-by-category">
       <div class="panel-title">
         Spending by Category
         <button class="btn-icon" title="Set budgets" onclick="nav('settings');showBudgetPanel()">⚙</button>
       </div>
       <div id="cat-list"></div>
     </div>
-    <div class="panel">
+    <div class="panel" data-panel-id="donut-chart">
       <div class="panel-title">Breakdown</div>
       <div class="chart-wrap"><canvas id="donut-chart"></canvas></div>
     </div>
-  </div>
-  <div class="grid2">
-    <div class="panel">
+    <div class="panel" data-panel-id="averages">
       <div class="panel-title">Monthly Averages <span id="avg-subtitle" style="font-size:10px;color:var(--muted);font-weight:normal"></span></div>
       <div id="averages-list"><div class="empty">Loading…</div></div>
     </div>
-    <div class="panel">
+    <div class="panel" data-panel-id="recent-txns">
       <div class="panel-title">Recent Transactions</div>
       <table class="txn-table">
         <thead><tr><th>Date</th><th>Name</th><th>Category</th><th style="text-align:right">Amount</th></tr></thead>
         <tbody id="recent-txns"></tbody>
       </table>
     </div>
-  </div>
-  <div class="panel" style="margin-top:16px">
-    <div class="panel-title">Recurring & Subscriptions <span id="recurring-subtitle" style="font-size:10px;color:var(--muted);font-weight:normal"></span></div>
-    <div id="recurring-list"><div class="empty">Loading…</div></div>
+    <div class="panel" data-panel-id="recurring">
+      <div class="panel-title">Recurring & Subscriptions <span id="recurring-subtitle" style="font-size:10px;color:var(--muted);font-weight:normal"></span></div>
+      <div id="recurring-list"><div class="empty">Loading…</div></div>
+    </div>
   </div>
   </div>
 </section>
@@ -235,6 +236,17 @@
 <!-- SETTINGS -->
 <section id="sec-settings" class="section">
   <div style="max-width:600px">
+
+    <div class="settings-section">
+      <div class="settings-title">Dashboard Layout</div>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">
+        Choose which panels appear on your dashboard and their order. Drag or use arrows to rearrange.
+      </p>
+      <div id="settings-panel-list"></div>
+      <div style="margin-top:12px">
+        <button class="btn btn-ghost btn-sm" onclick="resetDashboardLayout()">Reset to Default</button>
+      </div>
+    </div>
 
     <div class="settings-section">
       <div class="settings-title">Categories</div>
@@ -554,6 +566,22 @@
     <div id="template-list"><div class="empty">Loading…</div></div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('template-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- CUSTOMIZE DASHBOARD MODAL -->
+<div class="modal-backdrop" id="customize-modal">
+  <div class="modal" style="width:420px">
+    <div class="modal-title">Customize Dashboard</div>
+    <p style="font-size:12px;color:var(--muted);margin-bottom:16px">
+      Toggle panels on/off and drag to reorder. Changes apply instantly.
+    </p>
+    <div id="customize-panel-list"></div>
+    <div class="form-actions" style="margin-top:16px">
+      <button class="btn btn-ghost btn-sm" onclick="resetDashboardLayout()">Reset to Default</button>
+      <div style="flex:1"></div>
+      <button class="btn" onclick="closeModal('customize-modal')">Done</button>
     </div>
   </div>
 </div>

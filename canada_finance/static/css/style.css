@@ -62,6 +62,25 @@ body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:1
 .panel-title{font-size:10px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;
   font-family:var(--mono);margin-bottom:16px;display:flex;align-items:center;justify-content:space-between}
 
+/* Dashboard panels grid */
+#dashboard-panels{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:24px}
+.panel-hidden{display:none!important}
+
+/* Customize dashboard button */
+.customize-btn{color:var(--muted);transition:all .15s;margin-left:auto}
+.customize-btn:hover{color:var(--accent)}
+
+/* Customize panel list (modal + settings) */
+.customize-item{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.customize-item:last-child{border:none}
+.customize-item.dragging{opacity:.4}
+.customize-item.drag-over{border-top:2px solid var(--accent);padding-top:8px}
+.drag-handle{cursor:grab;color:var(--muted);font-size:16px;user-select:none;flex-shrink:0;letter-spacing:2px}
+.drag-handle:active{cursor:grabbing}
+.customize-arrows{display:flex;flex-direction:column;gap:0;flex-shrink:0}
+.customize-arrows .btn-icon{font-size:10px;padding:1px 4px;line-height:1}
+.customize-label{flex:1;font-size:13px}
+
 /* Cat list */
 .cat-row{display:flex;align-items:center;gap:10px;padding:7px 0;
   border-bottom:1px solid var(--border);cursor:pointer;transition:opacity .15s}
@@ -251,6 +270,7 @@ label{font-size:10px;color:var(--muted);letter-spacing:.5px;text-transform:upper
 @media(max-width:900px){
   .cards{grid-template-columns:1fr 1fr}
   .grid2{grid-template-columns:1fr}
+  #dashboard-panels{grid-template-columns:1fr}
 }
 @media(max-width:768px){
   /* Shell becomes column layout */
@@ -290,6 +310,9 @@ label{font-size:10px;color:var(--muted);letter-spacing:.5px;text-transform:upper
   .modal{width:100% !important;max-width:100vw !important;border-radius:14px 14px 0 0;
     max-height:85vh;padding:20px 18px}
   .modal-backdrop.open{align-items:flex-end}
+
+  /* Hide drag handle on mobile (use arrows instead) */
+  .drag-handle{display:none}
 
   /* Year review cards */
   #year-cards{grid-template-columns:1fr !important}
