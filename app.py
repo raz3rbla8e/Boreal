@@ -7,12 +7,15 @@ Or install with: pip install .
 Then run: canada-finance
 """
 
+import os
+
 from canada_finance import create_app
 
 app = create_app()
 
 if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
     print("\n🍁 CanadaFinance")
-    print("   Open: http://localhost:5000")
+    print(f"   Open: http://localhost:{port}")
     print("   Stop: Ctrl+C\n")
-    app.run(debug=False, port=5000)
+    app.run(debug=False, host="0.0.0.0", port=port)
