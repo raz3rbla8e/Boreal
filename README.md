@@ -4,46 +4,77 @@ A free, private, self-hosted personal finance dashboard for Canadians. Runs loca
 
 ## Features
 
+### Core
 - **Import bank CSVs** — drag and drop, auto-detects your bank format
+- **Import OFX/QFX files** — import directly from OFX/QFX bank downloads (common format from RBC, TD, etc.)
 - **Unknown CSV wizard** — if your bank isn't recognized, a step-by-step wizard maps columns and saves the config for future imports
 - **Auto-categorization** — 300+ merchant rules built in, gets smarter as you use it
 - **Monthly dashboard** — income, expenses, net saved, savings rate
 - **Month-over-month comparison** — see if you're spending more or less than last month
-- **Budget targets** — set spending limits per category with visual progress bars
+- **Year in review** — full annual breakdown with monthly bars and top 5 categories
+- **Dark/light mode** — toggle in the sidebar
+- **PWA support** — install as a standalone app on desktop or mobile (works offline for cached pages)
+
+### Budgeting & Tracking
+- **Budget targets** — set spending limits per category with visual progress bars and alerts
 - **Monthly averages** — see your average spend per category over the last 6 months
 - **Recurring/subscription detection** — automatically identifies merchants that charge you every month, flags price changes
-- **Year in review** — full annual breakdown with monthly bars and top 5 categories
+- **Savings goals** — set targets (e.g. "Vacation Fund $3,000"), contribute manually, track progress on the dashboard
+- **Category groups** — organize categories into logical groups (Essentials, Lifestyle) for grouped spending breakdowns
+- **Spending trends** — 6-month bar chart showing your spending trajectory
+
+### Accounts & Net Worth
+- **Account balances** — register your bank accounts (chequing, savings, credit card, investment) with opening balances; the dashboard shows live computed balances based on all imported transactions
+- **Net worth chart** — a line chart on the dashboard tracking your total net worth (sum of all account balances) over time, month by month
+- **Transfers between accounts** — move money between accounts (e.g. chequing → savings); creates linked hidden transactions so balances stay accurate without polluting your spending data
+
+### Scheduled Transactions
+- **Recurring schedules** — set up transactions that repeat on a schedule (weekly, biweekly, monthly, yearly) with a name, category, amount, and account
+- **Auto-post on due date** — when you open the app, due scheduled transactions are automatically posted as real transactions and the next due date advances
+- **Pause/resume** — disable a schedule temporarily without deleting it (e.g. pausing a gym membership over summer)
+
+### Transactions
 - **Account filter** — filter transactions by bank account (TD, Tangerine, etc.)
 - **Open search** — search "costco" and get both Costco Gas and Wholesale across all months
 - **Bulk actions** — select multiple transactions and delete, categorize, or hide them all at once
 - **Edit & learn** — fix a category once, it remembers forever (learned merchants)
 - **Retro-fix** — when you fix a category, the app automatically re-categorizes similar UNCATEGORIZED transactions
 - **Manual entries** — add cash, e-transfers, or any transaction not in a CSV
+- **Undo** — accidentally delete a transaction? Click the undo button to restore it instantly (supports delete, edit, and bulk delete)
+- **Transaction splitting** — split a single transaction into multiple categories
+
+### Import & Export
 - **Import rules** — create rules to auto-hide, label, or force-show transactions at import time
 - **Rule templates** — one-click presets (Default, Freelancer, Student, Self-Employed, Carpool)
 - **Hide/unhide transactions** — hide internal transfers or noise; view and restore hidden items
 - **Custom categories** — add, rename, or delete categories with emoji icons
 - **Export CSV** — export any month or all time (re-importable — full round trip)
+- **Export PDF** — generate a formatted PDF report of any month's transactions
 - **Backup/restore** — download your entire database as a backup, restore from a backup file
-- **Dark/light mode** — toggle in the sidebar
+
+### Privacy & Cost
 - **Zero cost** — no subscriptions, no cloud, no ads, no tracking
+- **Fully local** — all data stays on your machine in a single SQLite file
 
 ---
 
 ## Supported Banks
 
-| Bank | Account Type | CSV Available | Notes |
-|------|-------------|---------------|-------|
-| **Tangerine** | Chequing | ✅ | E-transfers, memo field included |
-| **Tangerine** | Credit Card | ✅ | All purchases and refunds |
-| **Wealthsimple** | Chequing | ✅ | Auto-detects account type from CSV |
-| **RBC** | Chequing | ✅ | Debit/Credit columns |
-| **TD** | Chequing | ✅ | EasyWeb → Download Transactions → CSV |
-| **CIBC** | Chequing | ✅ | Account Activity → Export |
-| **Scotiabank** | Chequing | ✅ | Single amount column |
-| **BMO** | Chequing | ✅ | Withdrawals/Deposits columns |
-| **National Bank** | Chequing | ✅ | Bilingual (EN/FR) supported |
-| **Any other bank** | Any | ✅ | Use the CSV wizard to map columns — config is saved automatically |
+| Bank | Account Type | Format | Notes |
+|------|-------------|--------|-------|
+| **Tangerine** | Chequing | CSV | E-transfers, memo field included |
+| **Tangerine** | Credit Card | CSV | All purchases and refunds |
+| **Wealthsimple** | Chequing | CSV | Auto-detects account type from CSV |
+| **RBC** | Chequing | CSV | Debit/Credit columns |
+| **TD** | Chequing | CSV | EasyWeb → Download Transactions → CSV |
+| **CIBC** | Chequing | CSV | Account Activity → Export |
+| **Scotiabank** | Chequing | CSV | Single amount column |
+| **BMO** | Chequing | CSV | Withdrawals/Deposits columns |
+| **National Bank** | Chequing | CSV | Bilingual (EN/FR) supported |
+| **Any bank** | Any | OFX/QFX | Standard bank download format — works with most Canadian banks |
+| **Any other bank** | Any | CSV | Use the CSV wizard to map columns — config is saved automatically |
+
+> **OFX/QFX support:** Most Canadian banks offer OFX or QFX downloads (sometimes called "Quicken" or "Money" format). Just drag the `.ofx` or `.qfx` file into the import area — the app parses it automatically, extracts the account name, and categorizes transactions.
 
 > **Credit cards at most banks** (TD, RBC, CIBC, BMO) are only available as PDFs — not CSVs. Tangerine is the main exception. If your bank only gives you PDFs, try a free converter like [DocuClipper](https://docuclipper.com) to get a CSV first.
 
@@ -95,7 +126,7 @@ pip install -e ".[dev]"
 pytest
 ```
 
-**156 tests** across 8 test files covering all endpoints, bank detection, security, and edge cases.
+**389 tests** across 13 test files covering all endpoints, bank detection, security, new features, and edge cases.
 
 **Environment variables** (optional — see `.env.example`):
 - `SECRET_KEY` — custom session secret (auto-generated if not set)
@@ -108,9 +139,9 @@ pytest
 ### Importing transactions
 
 1. Log into your bank's online banking
-2. Download your transactions as CSV (usually under "Account Activity" → "Export" or "Download")
+2. Download your transactions as CSV or OFX/QFX (usually under "Account Activity" → "Export" or "Download")
 3. Open **http://localhost:5000** → **Import CSV** tab
-4. Drag and drop one or more CSV files
+4. Drag and drop one or more CSV, OFX, or QFX files
 5. Done — duplicates are automatically skipped
 
 **You can import the same file multiple times safely.** The app uses a SHA-256 hash of date + name + amount + account to deduplicate — it will never double-count.
@@ -197,6 +228,69 @@ Switch to the **Year Review** tab to see:
 - **Restore:** Settings → Restore from Backup (upload a `.db` file to overwrite your current data)
 - **Export CSV:** Export tab → download all transactions as CSV (can be re-imported)
 
+### Accounts & balances
+
+The **Accounts** feature lets you register the actual bank accounts you use (chequing, savings, credit card, investment) and track their balances over time.
+
+**How it works:**
+1. Go to **Settings → Accounts**
+2. Add each account with a name (e.g. "TD Chequing"), type, and opening balance (your balance before any imported transactions)
+3. The app computes each account's live balance: `opening balance + all income − all expenses` for that account
+4. The **Account Balances** panel on the dashboard shows each account's current balance and a total across all accounts
+
+**Why it's useful:** Without accounts, CanadaFinance just shows spending and income in aggregate. With accounts, you can see _where_ your money actually sits — how much is in chequing vs. savings vs. investments. It turns the app from a spending tracker into a full financial picture.
+
+When you rename an account in Settings, all transactions linked to it are updated automatically.
+
+### Net worth
+
+The **Net Worth** panel on the dashboard shows a line chart of your total net worth over time.
+
+**How it works:**
+- Net worth = sum of all account balances at each month-end
+- Each account's balance at a given month = `opening balance + income up to that month − expenses up to that month`
+- The chart plots one data point per month, so you can see your net worth grow (or shrink) over time
+
+**Why it's useful:** Month-to-month spending is important, but the bigger question is: _am I building wealth?_ The net worth chart answers that. If you're saving $500/month but your net worth is flat, something's off. If it's trending up, you're on track.
+
+> You need at least one account set up (in Settings → Accounts) for net worth to appear.
+
+### Scheduled transactions
+
+**Scheduled transactions** let you pre-define recurring expenses or income that happen on a predictable schedule.
+
+**How it works:**
+1. Go to **Settings → Scheduled Transactions**
+2. Add a schedule: name, type (Expense/Income), category, amount, account, frequency (weekly/biweekly/monthly/yearly), and next due date
+3. When you open the app and a schedule is due, it's automatically posted as a real transaction and the next due date advances
+4. You can also manually post all due schedules by clicking **⚡ Post due now**
+5. Pause a schedule (⏸ button) to skip it temporarily — useful for seasonal expenses
+
+**Why it's useful:** Rent, Netflix, gym membership, car payment — these happen every month like clockwork. Instead of waiting for them to appear in a CSV (which might be delayed), scheduled transactions let you:
+- See upcoming expenses _before_ they hit your bank
+- Keep your budget accurate even if you haven't imported this month's CSV yet
+- Auto-categorize recurring expenses perfectly every time (no more UNCATEGORIZED rent)
+
+### Transfers
+
+Click **Transfer** in the sidebar to move money between accounts (e.g. chequing → savings).
+
+**How it works:**
+- A transfer creates two linked hidden transactions: an expense from the source account and income to the destination account
+- Both are hidden from your dashboard so they don't inflate your spending or income numbers
+- Account balances update correctly — the money moves from one account to the other
+- The transactions are linked by a `transfer_id` so the app knows they're a pair
+
+**Why it's useful:** When you move $500 from chequing to savings, that's not spending — it's just moving your own money. Without transfers, you'd either have to manually add two transactions and hide them, or your account balances would be wrong. Transfers handle this in one click.
+
+### Undo
+
+When you delete a transaction (single or bulk), an **Undo** button appears at the bottom-right of the screen. Click it to restore the deleted transaction(s) instantly.
+
+Undo also works for edits — if you change a transaction's name or category, undo reverts it to the previous values.
+
+The undo history keeps the last 50 actions and each undo is consumed after use (you can't undo the same action twice).
+
 ---
 
 ## Data & Privacy
@@ -249,11 +343,12 @@ Canada-finance/
 │   ├── routes/
 │   │   ├── __init__.py             ← Blueprint registration
 │   │   ├── main.py                 ← Homepage, health check
-│   │   ├── transactions.py         ← CRUD, search, pagination, bulk actions, account filter
-│   │   ├── import_export.py        ← CSV import/export, bank wizard, backup/restore
+│   │   ├── transactions.py         ← CRUD, search, pagination, bulk actions, undo
+│   │   ├── import_export.py        ← CSV/OFX import, export, bank wizard, backup/restore
 │   │   ├── summary.py              ← Dashboard, year review, averages, recurring detection
 │   │   ├── settings.py             ← Budgets, categories, learned merchants
-│   │   └── rules.py                ← Import rules CRUD, templates, test/apply
+│   │   ├── rules.py                ← Import rules CRUD, templates, test/apply
+│   │   └── accounts.py             ← Accounts, net worth, scheduled transactions, transfers, undo
 │   ├── services/
 │   │   ├── categorization.py       ← 300+ keyword → category mapping
 │   │   ├── csv_parser.py           ← YAML-driven CSV parsing engine
@@ -263,15 +358,22 @@ Canada-finance/
 │   │   └── index.html              ← Single-page HTML shell
 │   └── static/
 │       ├── css/style.css           ← Full app styling (dark/light themes)
-│       └── js/app.js               ← Frontend logic (~2000 lines, vanilla JS)
-├── tests/                          ← 156 tests across 8 files
+│       ├── js/app.js               ← Frontend logic (~2000 lines, vanilla JS)
+│       ├── manifest.json           ← PWA manifest for installability
+│       ├── sw.js                   ← Service worker for offline caching
+│       └── icons/                  ← PWA icons (192px, 512px)
+├── tests/                          ← 389 tests across 13 files
 │   ├── conftest.py                 ← Fixtures, helpers, sample CSV data
 │   ├── test_bank_detection.py      ← Bank YAML detection (10 banks + cross-check)
 │   ├── test_categories.py          ← Category CRUD and cascading
+│   ├── test_demo.py                ← Demo mode and reset
 │   ├── test_import_export.py       ← Import, export, round-trip, backup/restore
+│   ├── test_migrations.py          ← Database migration system (v1–v8)
+│   ├── test_mobile.py              ← Mobile responsiveness
+│   ├── test_new_features_v2.py     ← Accounts, net worth, schedules, transfers, undo, OFX, PWA
 │   ├── test_rules.py               ← Import rules CRUD and evaluation
 │   ├── test_security.py            ← CSRF, path traversal, input validation
-│   ├── test_settings.py            ← Budgets, learned merchants, settings
+│   ├── test_settings.py            ← Budgets, learned merchants, goals, groups
 │   ├── test_summary.py             ← Summary, year, averages, recurring
 │   └── test_transactions.py        ← CRUD, search, bulk actions, account filter
 └── finance.db                      ← Your data (auto-created, gitignored)
@@ -358,18 +460,34 @@ See existing configs in `banks/` for examples of single-amount vs. debit/credit,
 | POST | `/api/rules/apply-all` | Apply all rules retroactively |
 | GET | `/api/rule-templates` | List rule templates |
 | POST | `/api/rule-templates/load` | Load a rule template |
+| GET | `/api/accounts-list` | List accounts with balances |
+| POST | `/api/accounts-list` | Add an account |
+| PATCH | `/api/accounts-list/<id>` | Update an account |
+| DELETE | `/api/accounts-list/<id>` | Delete an account |
+| GET | `/api/net-worth` | Net worth over time |
+| GET | `/api/schedules` | List scheduled transactions |
+| POST | `/api/schedules` | Add a scheduled transaction |
+| PATCH | `/api/schedules/<id>` | Update a scheduled transaction |
+| DELETE | `/api/schedules/<id>` | Delete a scheduled transaction |
+| POST | `/api/schedules/post-due` | Post all due scheduled transactions |
+| POST | `/api/transfers` | Create a transfer between accounts |
+| POST | `/api/undo` | Undo the last delete/edit |
+| GET | `/api/undo/status` | Check if undo is available |
+| POST | `/api/import-ofx` | Import OFX/QFX files |
 
 ---
 
 ## Tech Stack
 
 - **Backend:** Python 3.9+ / Flask 3.0+
-- **Database:** SQLite (zero config, single file)
+- **Database:** SQLite (zero config, single file, 8 migration versions)
 - **Frontend:** Vanilla HTML/CSS/JS — no build step, no npm, no framework
-- **Charts:** Chart.js (loaded from CDN)
+- **Charts:** Chart.js 4.4.0 (loaded from CDN) — doughnut, bar, and line charts
+- **PDF:** fpdf2 for PDF report generation
 - **Bank configs:** YAML files — easy to add/modify
+- **PWA:** Service worker + manifest for installability and offline support
 - **Security:** CSRF protection, SHA-256 hashing, path traversal guards, input validation
-- **Tests:** pytest — 156 tests, 8 files, covers every endpoint
+- **Tests:** pytest — 389 tests, 13 files, covers every endpoint and feature
 - **Total install size:** ~2 MB
 
 ---
