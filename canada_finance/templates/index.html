@@ -13,6 +13,17 @@
 <body>
 <div class="shell">
 
+<!-- MOBILE TOP BAR -->
+<div class="mobile-topbar">
+  <button class="mobile-menu-btn" onclick="toggleMobileMenu()" aria-label="Open menu">
+    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+  </button>
+  <div class="logo"><span class="logo-icon">🍁</span>CanadaFinance</div>
+</div>
+
+<!-- SIDEBAR OVERLAY -->
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeMobileMenu()"></div>
+
 <!-- SIDEBAR -->
 <aside class="sidebar">
   <div class="logo"><span class="logo-icon">🍁</span>CanadaFinance</div>
@@ -148,7 +159,7 @@
     <div class="txn-title">All Transactions</div>
     <div class="filter-row">
       <input type="text" id="search-input" placeholder="Search — costco, eating out, 2026-03…"
-        style="width:260px" oninput="onSearchInput()" onkeydown="if(event.key==='Escape')clearSearch()">
+        style="width:260px;max-width:100%" oninput="onSearchInput()" onkeydown="if(event.key==='Escape')clearSearch()">
       <select id="filter-type" onchange="loadTransactions()">
         <option value="">All Types</option>
         <option value="Expense">Expenses</option>

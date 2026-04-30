@@ -1362,6 +1362,7 @@ function nav(id) {
   document.querySelectorAll('.nav-btn').forEach(b=>{
     if (b.getAttribute('onclick')?.includes(`'${id}'`)) b.classList.add('active');
   });
+  if (window.innerWidth <= 768) closeMobileMenu();
   if (id==='dashboard' && document.getElementById('empty-state').style.display !== 'none') refreshDashboard();
   if (id==='transactions') { loadTransactions(); setTimeout(applyDemoToTransactions, 100); }
   if (id==='year') renderYear();
@@ -1392,5 +1393,39 @@ function toast(msg, type='success') {
   el.textContent=msg; el.className=`toast ${type} show`;
   setTimeout(()=>el.classList.remove('show'), 2800);
 }
+
+// ── MOBILE MENU ───────────────────────────────────────────────────────────────
+function toggleMobileMenu() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  const isOpen = sidebar.classList.contains('open');
+  if (isOpen) {
+    closeMobileMenu();
+  } else {
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeMobileMenu() {
+  const sidebar = document.querySelector('.sidebar');
+  const overlay = document.getElementById('sidebar-overlay');
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Close mobile menu when a nav button is clicked
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (window.innerWidth <= 768) closeMobileMenu();
+  });
+});
+
+// Close mobile menu on resize to desktop
+window.addEventListener('resize', () => {
+  if (window.innerWidth > 768) closeMobileMenu();
+});
 
 init();

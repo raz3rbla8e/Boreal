@@ -230,13 +230,111 @@ label{font-size:10px;color:var(--muted);letter-spacing:.5px;text-transform:upper
 .hidden-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-family:var(--mono);
   background:rgba(248,113,113,.1);color:var(--red);padding:2px 8px;border-radius:10px;margin-left:8px}
 
+/* Mobile hamburger button */
+.mobile-menu-btn{display:none;background:none;border:none;color:var(--text);cursor:pointer;
+  padding:8px;border-radius:8px;transition:background .15s;flex-shrink:0;z-index:201}
+.mobile-menu-btn:hover{background:var(--surface2)}
+.mobile-menu-btn svg{display:block}
+
+/* Mobile top bar */
+.mobile-topbar{display:none;align-items:center;gap:10px;padding:12px 16px;
+  background:var(--surface);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:100}
+.mobile-topbar .logo{margin-bottom:0;padding-bottom:0;border-bottom:none;flex:1}
+
+/* Sidebar overlay */
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:149;
+  backdrop-filter:blur(2px)}
+.sidebar-overlay.open{display:block}
+
 /* Responsive */
 @media(max-width:900px){
   .cards{grid-template-columns:1fr 1fr}
   .grid2{grid-template-columns:1fr}
 }
-@media(max-width:600px){
-  .sidebar{display:none}
-  .main{padding:16px}
+@media(max-width:768px){
+  /* Shell becomes column layout */
+  .shell{flex-direction:column}
+
+  /* Mobile top bar visible */
+  .mobile-topbar{display:flex}
+  .mobile-menu-btn{display:block}
+
+  /* Sidebar becomes slide-over drawer */
+  .sidebar{position:fixed;left:0;top:0;z-index:150;
+    transform:translateX(-100%);transition:transform .25s ease;
+    box-shadow:4px 0 24px rgba(0,0,0,.3);width:260px}
+  .sidebar.open{transform:translateX(0)}
+
+  /* Main content adjustments */
+  .main{padding:16px;max-width:100%}
+
+  /* Cards responsive */
+  .cards{grid-template-columns:1fr 1fr}
+
+  /* Transaction filter row */
+  .filter-row{flex-direction:column;align-items:stretch;width:100%}
+  .filter-row select,.filter-row input[type=text]{width:100%}
+  .txn-header{flex-direction:column;align-items:stretch}
+
+  /* Table scrollable */
+  .txn-table{display:block;overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+  /* Month label */
+  .month-label{font-size:15px}
+
+  /* Form grid single column on mobile */
+  .form-grid{grid-template-columns:1fr}
+
+  /* Modal full-width on mobile */
+  .modal{width:100% !important;max-width:100vw !important;border-radius:14px 14px 0 0;
+    max-height:85vh;padding:20px 18px}
+  .modal-backdrop.open{align-items:flex-end}
+
+  /* Year review cards */
+  #year-cards{grid-template-columns:1fr !important}
+
+  /* Year bar layout */
+  .year-bar-row{flex-direction:column;align-items:flex-start;gap:4px}
+  .year-month{width:auto}
+  .year-amounts{font-size:10px;flex-wrap:wrap}
+
+  /* Settings adjustments */
+  .settings-section .form-grid{grid-template-columns:1fr}
+  #sec-settings > div{max-width:100% !important}
+
+  /* Demo banner */
+  .demo-banner{flex-direction:column;text-align:center;gap:8px;font-size:12px}
+
+  /* Better touch targets */
+  .nav-btn{padding:12px 14px;font-size:14px}
+  .btn,.btn-sm{min-height:40px;font-size:13px}
+  select,input[type=text],input[type=date],input[type=number]{
+    min-height:40px;font-size:14px}
+
+  /* Bulk toolbar */
+  .bulk-toolbar{flex-wrap:wrap}
+
+  /* Condition rows in rule modal */
+  .condition-row{flex-direction:column;align-items:stretch}
+  .condition-row select,.condition-row input{width:100%}
+
+  /* Drop zone */
+  .drop-zone{padding:24px 16px}
+
+  /* Import panel full width */
+  #sec-import .panel{max-width:100% !important}
+}
+@media(max-width:480px){
   .cards{grid-template-columns:1fr}
+  .card-value{font-size:18px}
+  .main{padding:12px}
+  .month-label{font-size:14px}
+
+  /* Stack form actions vertically */
+  .form-actions{flex-direction:column}
+  .form-actions .btn,.form-actions .btn-ghost{width:100%}
+
+  /* Smaller panel padding */
+  .panel{padding:14px 16px}
 }
