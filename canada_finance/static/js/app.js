@@ -1475,6 +1475,7 @@ async function updateHiddenCount() {
   const btn = document.getElementById('hidden-toggle');
   badge.textContent = res.count;
   btn.style.display = res.count > 0 ? '' : 'none';
+  if (res.count === 0 && showingHidden) toggleHiddenView();
 }
 
 function toggleHiddenView() {
