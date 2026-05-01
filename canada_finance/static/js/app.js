@@ -541,11 +541,11 @@ function renderCatList(cats) {
   const max = cats[0]?.total || 1;
   document.getElementById('cat-list').innerHTML = cats.length ? cats.map(c => {
     const hasBudget = c.budget && c.budget > 0;
-    const barWidth = hasBudget ? Math.min(c.total/c.budget*100,100).toFixed(0) : (c.total/max*100).toFixed(0);
+    const barWidth = hasBudget ? Math.min(c.total/c.budget*100,100).toFixed(0) : 0;
     const barColor = hasBudget ? (c.total>c.budget?'var(--red)':c.total>c.budget*.8?'var(--amber)':'var(--accent)') : 'var(--accent)';
     return `<div class="cat-row" onclick="filterByCat('${escapeAttr(c.category)}')">
       <span class="cat-name">${escapeHtml(c.category)}</span>
-      <div class="cat-bar-wrap"><div class="cat-bar" style="width:${barWidth}%;background:${barColor}"></div></div>
+      ${hasBudget ? `<div class="cat-bar-wrap"><div class="cat-bar" style="width:${barWidth}%;background:${barColor}"></div></div>` : ''}
       ${hasBudget ? `<span class="cat-budget ${c.total>c.budget?'over':''}">${Math.round(c.total/c.budget*100)}%</span>` : ''}
       <span class="cat-amt">${fmt(c.total)}</span>
     </div>`;
