@@ -429,7 +429,7 @@ async function init() {
   if (demoRes && demoRes.demo) {
     isDemo = true;
     document.getElementById('demo-banner').style.display = 'flex';
-    document.title = '[Demo] CanadaFinance';
+    document.title = '[Demo] Boreal';
     applyDemoRestrictions();
   }
 

@@ -1,6 +1,6 @@
 {
-  "name": "CanadaFinance",
-  "short_name": "CanadaFinance",
+  "name": "Boreal",
+  "short_name": "Boreal",
   "description": "Privacy-first Canadian personal finance tracker",
   "start_url": "/",
   "display": "standalone",

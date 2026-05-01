@@ -418,7 +418,7 @@ class TestPWA:
         res = client.get("/static/manifest.json")
         assert res.status_code == 200
         data = json.loads(res.data)
-        assert data["name"] == "CanadaFinance"
+        assert data["name"] == "Boreal"
         assert data["display"] == "standalone"
 
     def test_sw_accessible(self, client):

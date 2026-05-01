@@ -1,5 +1,5 @@
-# Canada Finance — re-import of exported CSV
-name: Canada Finance Export
+# Boreal — re-import of exported CSV
+name: Boreal Export
 version: 1
 last_verified: "2026-04"
 account_label: "{account_type}"

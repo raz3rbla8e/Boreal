@@ -1,6 +1,6 @@
 ﻿#!/usr/bin/env python3
 """
-CanadaFinance - Personal Finance Dashboard for Canadians
+Boreal - Personal Finance Dashboard for Canadians
 
 Entry point: python app.py
 Or install with: pip install .
@@ -15,7 +15,7 @@ app = create_app()
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    print("\n🍁 CanadaFinance")
+    print("\n� Boreal")
     print(f"   Open: http://localhost:{port}")
     print("   Stop: Ctrl+C\n")
     app.run(debug=False, host="0.0.0.0", port=port)

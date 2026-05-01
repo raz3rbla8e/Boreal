@@ -1,5 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
-# PyInstaller spec file for CanadaFinance
+# PyInstaller spec file for Boreal
 # Build with: pyinstaller canada_finance.spec
 
 import os
@@ -25,7 +25,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='CanadaFinance',
+    name='Boreal',
     debug=False,
     strip=False,
     upx=True,

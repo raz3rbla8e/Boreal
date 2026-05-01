@@ -28,7 +28,7 @@ EXPECTED_NAMES = {
     "tangerine_debit": "Tangerine (Chequing)",
     "td": "TD Canada Trust (Chequing)",
     "wealthsimple": "Wealthsimple",
-    "canada_finance_export": "Canada Finance Export",
+    "canada_finance_export": "Boreal Export",
 }
 
 
@@ -100,7 +100,7 @@ def test_detect_wealthsimple():
 
 def test_detect_canada_finance_export():
     cfg, _ = detect_bank_config(BANK_HEADERS["canada_finance_export"], _configs())
-    assert cfg is not None, "Canada Finance Export header not detected"
+    assert cfg is not None, "Boreal Export header not detected"
     assert cfg["name"] == EXPECTED_NAMES["canada_finance_export"]
 
 

@@ -14,6 +14,11 @@ def index():
     return render_template("index.html")
 
 
+@main_bp.route("/icon-compare")
+def icon_compare():
+    return render_template("icon_compare.html")
+
+
 @main_bp.route("/api/health")
 def health():
     return jsonify({

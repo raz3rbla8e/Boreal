@@ -238,7 +238,7 @@ def test_export_reimport_round_trip(client):
                     data={"files": (io.BytesIO(csv_data), "export.csv")},
                     content_type="multipart/form-data")
     result = r.get_json()
-    assert result[0]["bank"] == "Canada Finance Export"
+    assert result[0]["bank"] == "Boreal Export"
     assert result[0]["added"] == 2
 
     # Verify data integrity

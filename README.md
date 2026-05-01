@@ -1,4 +1,4 @@
-# 🍁 CanadaFinance
+# � Boreal
 
 A free, private, self-hosted personal finance dashboard for Canadians. Runs locally on your laptop — your bank data never leaves your computer.
 
@@ -94,8 +94,8 @@ The app installs dependencies automatically on first launch and opens your brows
 ### Manual setup
 
 ```bash
-git clone https://github.com/raz3rbla8e/Canada-finance
-cd Canada-finance
+git clone https://github.com/raz3rbla8e/Boreal
+cd Boreal
 pip install -r requirements.txt
 python app.py
 # Open http://localhost:5000
@@ -103,20 +103,20 @@ python app.py
 
 ### Standalone `.exe` (no Python needed)
 
-Download `CanadaFinance.exe` from the [Releases](https://github.com/raz3rbla8e/Canada-finance/releases) page — just run it.
+Download `Boreal.exe` from the [Releases](https://github.com/raz3rbla8e/Boreal/releases) page — just run it.
 
 To build the `.exe` yourself:
 ```bash
 pip install pyinstaller
 pyinstaller canada_finance.spec
-# Output: dist/CanadaFinance.exe
+# Output: dist/Boreal.exe
 ```
 
 ### Docker
 
 ```bash
-docker build -t canada-finance .
-docker run -p 5000:5000 -v finance_data:/app canada-finance
+docker build -t boreal .
+docker run -p 5000:5000 -v finance_data:/app boreal
 ```
 
 ### Running tests
@@ -148,7 +148,7 @@ pytest
 
 **Unknown banks?** If the CSV format isn't recognized, a wizard opens automatically. You map the date, description, and amount columns, name the bank, preview the parsed data, and save. A YAML config is created in `banks/` and future imports auto-detect.
 
-**Re-importing your own exports?** If you export a CSV from CanadaFinance and re-import it (or share it with a friend), the app recognizes its own format and preserves all categories, types, and account names.
+**Re-importing your own exports?** If you export a CSV from Boreal and re-import it (or share it with a friend), the app recognizes its own format and preserves all categories, types, and account names.
 
 ### Monthly routine
 
@@ -238,7 +238,7 @@ The **Accounts** feature lets you register the actual bank accounts you use (che
 3. The app computes each account's live balance: `opening balance + all income − all expenses` for that account
 4. The **Account Balances** panel on the dashboard shows each account's current balance and a total across all accounts
 
-**Why it's useful:** Without accounts, CanadaFinance just shows spending and income in aggregate. With accounts, you can see _where_ your money actually sits — how much is in chequing vs. savings vs. investments. It turns the app from a spending tracker into a full financial picture.
+**Why it's useful:** Without accounts, Boreal just shows spending and income in aggregate. With accounts, you can see _where_ your money actually sits — how much is in chequing vs. savings vs. investments. It turns the app from a spending tracker into a full financial picture.
 
 When you rename an account in Settings, all transactions linked to it are updated automatically.
 
@@ -308,7 +308,7 @@ The undo history keeps the last 50 actions and each undo is consumed after use (
 ## File Structure
 
 ```
-Canada-finance/
+Boreal/
 ├── app.py                          ← Entry point
 ├── pyproject.toml                  ← Package config and dependencies
 ├── requirements.txt                ← Pip dependencies

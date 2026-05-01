@@ -1,4 +1,4 @@
-/* ── CanadaFinance — Redesigned UI ─────────────────────────────────────────── */
+/* ── Boreal — Redesigned UI ────────────────────────────────────────────────── */
 /* Design: Refined financial-grade. Plus Jakarta Sans + JetBrains Mono.        */
 /* Accent: confident blue + mint green for positive signals.                   */
 
@@ -64,7 +64,7 @@
   --blue-dim:    oklch(62%  0.18  240 / 0.08);
   --mint-dim:    oklch(55%  0.16  165 / 0.10);
   --red-dim:     oklch(55%  0.20  25  / 0.08);
-}
+}\n[data-theme=\"light\"] .logo-mark { background: oklch(92% 0.02 240); }
 
 /* ── RESET ───────────────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -127,7 +127,7 @@ body {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-sm);
-  background: var(--blue);
+  background: oklch(25% 0.06 240);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -143,9 +143,9 @@ body {
   overflow: hidden;
   opacity: 1;
   transition: opacity var(--t), max-width var(--t-slow);
-  max-width: 140px;
+  flex: 1;
 }
-.sidebar.collapsed .logo-text { opacity: 0; max-width: 0; }
+.sidebar.collapsed .logo-text { opacity: 0; max-width: 0; flex: 0; overflow: hidden; }
 .sidebar.collapsed .logo { flex-direction: column; gap: 6px; padding: 12px 8px; align-items: center; }
 
 /* Sidebar toggle */
@@ -365,9 +365,11 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, var(--surface2) 0%, transparent 60%);
+  background: linear-gradient(135deg, oklch(100% 0 0 / 0.04) 0%, transparent 60%);
   opacity: 0;
   transition: opacity var(--t);
+  z-index: 0;
+  pointer-events: none;
 }
 .card:hover { border-color: var(--border); box-shadow: 0 4px 24px rgba(0,0,0,0.15); }
 .card:hover::before { opacity: 1; }
@@ -379,6 +381,8 @@ body {
   text-transform: uppercase;
   color: var(--muted);
   margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
 }
 .card-value {
   font-family: var(--mono);
@@ -387,6 +391,8 @@ body {
   letter-spacing: -1px;
   line-height: 1;
   color: var(--text);
+  position: relative;
+  z-index: 1;
 }
 .card-value.green  { color: var(--mint); }
 .card-value.red    { color: var(--red); }
@@ -397,6 +403,8 @@ body {
   font-family: var(--mono);
   color: var(--muted);
   margin-top: 8px;
+  position: relative;
+  z-index: 1;
 }
 .card-sub.up   { color: var(--mint); }
 .card-sub.down { color: var(--red); }
@@ -408,6 +416,7 @@ body {
   right: 0;
   height: 2px;
   border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+  z-index: 1;
 }
 .card-accent-bar.green  { background: var(--mint); }
 .card-accent-bar.red    { background: var(--red); }

@@ -1,8 +1,8 @@
 @echo off
-title CanadaFinance
+title Boreal
 echo.
 echo  ==========================================
-echo   CanadaFinance - Personal Finance Dashboard
+echo   Boreal - Personal Finance Dashboard
 echo  ==========================================
 echo.
 
@@ -32,7 +32,7 @@ if not exist ".installed" (
     echo.
 )
 
-echo  Starting CanadaFinance...
+echo  Starting Boreal...
 echo  Open your browser to: http://localhost:5000
 echo  Press Ctrl+C to stop.
 echo.

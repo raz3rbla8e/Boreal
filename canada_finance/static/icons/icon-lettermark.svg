@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5B9CF5"/>
+      <stop offset="100%" stop-color="#3B7DD8"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="#0f1218"/>
+  <!-- B lettermark — geometric, angular -->
+  <path d="M168,104 L168,408 L296,408 Q368,408 368,344 Q368,296 316,280 Q356,264 356,220 Q356,104 280,104 Z
+           M224,160 L272,160 Q300,160 300,196 Q300,232 272,232 L224,232 Z
+           M224,280 L288,280 Q316,280 316,320 Q316,356 288,356 L224,356 Z"
+        fill="url(#g)" fill-rule="evenodd"/>
+</svg>

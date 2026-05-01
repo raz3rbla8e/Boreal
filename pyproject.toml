@@ -3,9 +3,9 @@ requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "canada-finance"
+name = "boreal"
 version = "1.0.0"
-description = "Personal Finance Dashboard for Canadians"
+description = "Boreal — Personal Finance Dashboard for Canadians"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [

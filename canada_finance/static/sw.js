@@ -1,4 +1,4 @@
-const CACHE_NAME = 'canadafinance-v1';
+const CACHE_NAME = 'boreal-v1';
 const STATIC_ASSETS = [
   '/',
   '/static/css/style.css',

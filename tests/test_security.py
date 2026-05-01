@@ -59,7 +59,7 @@ def test_xss_stored_not_escaped_server_side(client):
 def test_index_page_loads(client):
     r = client.get("/")
     assert r.status_code == 200
-    assert b"CanadaFinance" in r.data
+    assert b"Boreal" in r.data
 
 
 # ── CSRF ───────────────────────────────────────────────────────────────────────

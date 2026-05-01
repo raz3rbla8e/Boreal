@@ -3,7 +3,7 @@ set -e
 
 echo ""
 echo "  =========================================="
-echo "   CanadaFinance - Personal Finance Dashboard"
+echo "   Boreal - Personal Finance Dashboard"
 echo "  =========================================="
 echo ""
 
@@ -27,7 +27,7 @@ if [ ! -f ".installed" ]; then
     echo ""
 fi
 
-echo "  Starting CanadaFinance..."
+echo "  Starting Boreal..."
 echo "  Open your browser to: http://localhost:5000"
 echo "  Press Ctrl+C to stop."
 echo ""
