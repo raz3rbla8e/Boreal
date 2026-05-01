@@ -472,7 +472,7 @@ async function init() {
   autoPostSchedules();
 }
 
-const fmt = n => '$' + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmt = n => (n < 0 ? '-$' : '$') + Math.abs(n).toLocaleString('en-CA',{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtMonth = m => { const [y,mo]=m.split('-'); return new Date(y,mo-1).toLocaleString('default',{month:'long',year:'numeric'}); };
 
 // ── MONTH NAV ─────────────────────────────────────────────────────────────────
