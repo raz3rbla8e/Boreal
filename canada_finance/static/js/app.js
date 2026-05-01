@@ -963,12 +963,36 @@ async function deleteCategory(id, name, type) {
 async function loadBudgets() {
   const budgets = await apiFetch('/api/budgets') || [];
   document.getElementById('budget-list').innerHTML = budgets.length
-    ? budgets.map(b=>`<div class="settings-row">
-        <div><div class="settings-label">${escapeHtml(b.category)}</div>
+    ? budgets.map(b=>`<div class="settings-row" id="budget-row-${escapeAttr(b.category)}">
+        <div style="flex:1"><div class="settings-label">${escapeHtml(b.category)}</div>
           <div class="settings-sub">${fmt(b.monthly_limit)}/month</div></div>
-        <button class="btn btn-red btn-sm" onclick="deleteBudget('${escapeAttr(b.category)}')">Remove</button>
+        <div style="display:flex;gap:4px">
+          <button class="btn-icon" onclick="startEditBudget('${escapeAttr(b.category)}',${b.monthly_limit})">✏️</button>
+          <button class="btn-icon" onclick="deleteBudget('${escapeAttr(b.category)}')">🗑️</button>
+        </div>
       </div>`).join('')
     : '<div style="color:var(--muted);font-size:12px;margin-bottom:8px">No budgets set</div>';
+}
+
+function startEditBudget(cat, currentAmt) {
+  const row = document.getElementById('budget-row-' + cat);
+  if (!row) return;
+  row.innerHTML = `<div style="flex:1"><div class="settings-label">${escapeHtml(cat)}</div></div>
+    <div style="display:flex;gap:6px;align-items:center">
+      <input type="number" id="edit-budget-amt" value="${currentAmt}" style="width:90px" min="1" step="0.01"
+        onkeydown="if(event.key==='Enter')saveEditBudget('${escapeAttr(cat)}');if(event.key==='Escape')loadBudgets()">
+      <button class="btn btn-sm" onclick="saveEditBudget('${escapeAttr(cat)}')">Save</button>
+      <button class="btn-icon" onclick="loadBudgets()">✕</button>
+    </div>`;
+  row.querySelector('#edit-budget-amt').focus();
+}
+
+async function saveEditBudget(cat) {
+  const amt = document.getElementById('edit-budget-amt').value;
+  if (!amt || parseFloat(amt) <= 0) return toast('Enter a valid amount','error');
+  await apiFetch('/api/budgets', {method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({category: cat, amount: parseFloat(amt)})});
+  loadBudgets(); toast('Budget updated ✓','success');
 }
 
 function populateBudgetCat() {
@@ -1826,11 +1850,14 @@ function renderBudgetAlerts(cats) {
   el.style.display = '';
   el.innerHTML = alerts.map(c => {
     const pct = Math.round(c.total / c.budget * 100);
+    const barPct = Math.min(pct, 100);
     const cls = pct >= 100 ? 'danger' : 'warning';
-    const icon = pct >= 100 ? '🔴' : '🟡';
     return `<div class="budget-alert-item ${cls}">
-      <span class="budget-alert-icon">${icon}</span>
-      <strong>${escapeHtml(c.category)}</strong>: ${fmt(c.total)} of ${fmt(c.budget)} budget (${pct}%)
+      <span class="budget-alert-dot"></span>
+      <span class="budget-alert-name">${escapeHtml(c.category)}</span>
+      <span style="color:var(--muted);font-size:11px">${fmt(c.total)} / ${fmt(c.budget)}</span>
+      <div class="budget-alert-bar"><div class="budget-alert-bar-fill" style="width:${barPct}%"></div></div>
+      <span class="budget-alert-pct">${pct}%</span>
     </div>`;
   }).join('');
 }
@@ -1907,17 +1934,45 @@ async function loadGoalsSettings() {
   if (!goals || !goals.length) { el.innerHTML = '<div style="color:var(--muted);font-size:12px">No goals yet</div>'; return; }
   el.innerHTML = goals.map(g => {
     const pct = Math.min(100, Math.round(g.current_amount / g.target_amount * 100));
-    return `<div class="settings-row">
+    return `<div class="settings-row" id="goal-row-${g.id}">
       <div style="display:flex;align-items:center;gap:6px;flex:1">
         <span>${escapeHtml(g.icon)}</span>
         <span class="settings-label">${escapeHtml(g.name)}</span>
         <span style="font-size:11px;color:var(--muted)">${fmt(g.current_amount)}/${fmt(g.target_amount)} (${pct}%)</span>
       </div>
       <div style="display:flex;gap:4px">
+        <button class="btn-icon" onclick="startEditGoal(${g.id},'${escapeAttr(g.name)}',${g.target_amount},${g.current_amount},'${escapeAttr(g.icon)}')">✏️</button>
         <button class="btn-icon" onclick="deleteGoal(${g.id})">🗑️</button>
       </div>
     </div>`;
   }).join('');
+}
+
+function startEditGoal(id, name, target, current, icon) {
+  const row = document.getElementById('goal-row-' + id);
+  if (!row) return;
+  row.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1">
+      <input type="text" id="edit-goal-icon" value="${escapeAttr(icon)}" style="width:42px;text-align:center" maxlength="2">
+      <input type="text" id="edit-goal-name" value="${escapeAttr(name)}" style="flex:1;min-width:90px" placeholder="Name">
+      <input type="number" id="edit-goal-target" value="${target}" style="width:90px" min="1" step="0.01" placeholder="Target">
+      <input type="number" id="edit-goal-current" value="${current}" style="width:90px" min="0" step="0.01" placeholder="Saved">
+      <button class="btn btn-sm" onclick="saveEditGoal(${id})">Save</button>
+      <button class="btn-icon" onclick="loadGoalsSettings()">✕</button>
+    </div>`;
+  row.querySelector('#edit-goal-name').focus();
+}
+
+async function saveEditGoal(id) {
+  const name = document.getElementById('edit-goal-name').value.trim();
+  const target = document.getElementById('edit-goal-target').value;
+  const current = document.getElementById('edit-goal-current').value;
+  const icon = document.getElementById('edit-goal-icon').value.trim() || '🎯';
+  if (!name) return toast('Enter a goal name','error');
+  if (!target || parseFloat(target) <= 0) return toast('Enter a valid target','error');
+  const res = await apiFetch(`/api/goals/${id}`, {method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, target_amount: parseFloat(target), current_amount: parseFloat(current || 0), icon})});
+  if (res && res.ok) { loadGoalsSettings(); renderGoalsDashboard(); toast('Goal updated ✓','success'); }
 }
 
 async function addGoal() {
@@ -1966,29 +2021,29 @@ async function loadGroupsSettings() {
   el.innerHTML = groups.filter(g => g.id !== null).map(g => `
     <div class="group-block">
       <div class="group-block-header">
-        <span>${escapeHtml(g.name)}</span>
+        <span>${escapeHtml(g.name)} <span style="font-weight:400;font-size:11px;color:var(--muted)">(${g.categories.length})</span></span>
         <div style="display:flex;gap:4px">
           <button class="btn-icon" onclick="renameGroup(${g.id},'${escapeAttr(g.name)}')">✏️</button>
           <button class="btn-icon" onclick="deleteGroup(${g.id})">🗑️</button>
         </div>
       </div>
-      ${g.categories.map(c => `<div class="group-cat-item" style="justify-content:space-between">
-        <span>• ${escapeHtml(c.name)}</span>
-        <select class="group-reassign-select" onchange="reassignCategory(${c.id},this.value)" style="font-size:11px;padding:1px 4px;background:var(--surface);color:var(--text);border:1px solid var(--border-subtle);border-radius:4px">
+      ${g.categories.length ? g.categories.map(c => `<div class="group-cat-item">
+        <span class="group-cat-name">• ${escapeHtml(c.name)}</span>
+        <select class="group-reassign-select" onchange="reassignCategory(${c.id},this.value)">
           ${groupOptions.map(go => `<option value="${go.id}"${go.id===g.id?' selected':''}>${escapeHtml(go.name)}</option>`).join('')}
           <option value=""${g.id===null?' selected':''}>Ungrouped</option>
         </select>
-      </div>`).join('')}
+      </div>`).join('') : '<div style="font-size:11px;color:var(--muted);padding:4px 0">No categories in this group</div>'}
     </div>
   `).join('');
   // Show ungrouped categories if any
   const ungrouped = groups.find(g => g.id === null);
   if (ungrouped && ungrouped.categories.length) {
-    el.innerHTML += `<div class="group-block">
-      <div class="group-block-header"><span>Ungrouped</span></div>
-      ${ungrouped.categories.map(c => `<div class="group-cat-item" style="justify-content:space-between">
-        <span>• ${escapeHtml(c.name)}</span>
-        <select class="group-reassign-select" onchange="reassignCategory(${c.id},this.value)" style="font-size:11px;padding:1px 4px;background:var(--surface);color:var(--text);border:1px solid var(--border-subtle);border-radius:4px">
+    el.innerHTML += `<div class="group-block" style="border-style:dashed">
+      <div class="group-block-header"><span>Ungrouped <span style="font-weight:400;font-size:11px;color:var(--muted)">(${ungrouped.categories.length})</span></span></div>
+      ${ungrouped.categories.map(c => `<div class="group-cat-item">
+        <span class="group-cat-name">• ${escapeHtml(c.name)}</span>
+        <select class="group-reassign-select" onchange="reassignCategory(${c.id},this.value)">
           ${groupOptions.map(go => `<option value="${go.id}">${escapeHtml(go.name)}</option>`).join('')}
           <option value="" selected>Ungrouped</option>
         </select>
@@ -2267,18 +2322,54 @@ async function loadSchedulesSettings() {
   }
   el.innerHTML = data.map(s => {
     const badge = s.enabled ? '' : '<span style="color:var(--red);font-size:10px;margin-left:6px">disabled</span>';
-    return `<div class="settings-row">
+    return `<div class="settings-row" id="sched-row-${s.id}">
       <div style="display:flex;align-items:center;gap:6px;flex:1">
         <span class="settings-label">${escapeHtml(s.name)}</span>
         <span style="font-size:10px;color:var(--muted)">${escapeHtml(s.frequency)} · ${fmt(s.amount)} · ${escapeHtml(s.account)} · due ${escapeHtml(s.next_due)}</span>
         ${badge}
       </div>
       <div style="display:flex;gap:4px">
+        <button class="btn-icon" onclick="startEditSchedule(${s.id},'${escapeAttr(s.name)}','${escapeAttr(s.category)}',${s.amount},'${escapeAttr(s.frequency)}','${escapeAttr(s.next_due)}')">✏️</button>
         <button class="btn-icon" onclick="toggleSchedule(${s.id},${s.enabled?0:1})">${s.enabled?'⏸':'▶'}</button>
         <button class="btn-icon" onclick="deleteSchedule(${s.id})">🗑️</button>
       </div>
     </div>`;
   }).join('');
+}
+
+function startEditSchedule(id, name, category, amount, frequency, nextDue) {
+  const row = document.getElementById('sched-row-' + id);
+  if (!row) return;
+  const cats = EXPENSE_CATS.concat(INCOME_CATS);
+  const catOpts = cats.map(c => `<option value="${escapeAttr(c)}"${c===category?' selected':''}>${escapeHtml(c)}</option>`).join('');
+  const freqOpts = ['monthly','weekly','biweekly','yearly'].map(f =>
+    `<option value="${f}"${f===frequency?' selected':''}>${f}</option>`).join('');
+  row.innerHTML = `<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1">
+      <input type="text" id="edit-sched-name" value="${escapeAttr(name)}" style="flex:1;min-width:90px" placeholder="Name">
+      <select id="edit-sched-cat" style="width:120px">${catOpts}</select>
+      <input type="number" id="edit-sched-amount" value="${amount}" style="width:80px" min="0.01" step="0.01">
+      <select id="edit-sched-freq" style="width:100px">${freqOpts}</select>
+      <input type="date" id="edit-sched-due" value="${escapeAttr(nextDue)}" style="width:130px">
+      <button class="btn btn-sm" onclick="saveEditSchedule(${id})">Save</button>
+      <button class="btn-icon" onclick="loadSchedulesSettings()">✕</button>
+    </div>`;
+  row.querySelector('#edit-sched-name').focus();
+}
+
+async function saveEditSchedule(id) {
+  const name = document.getElementById('edit-sched-name').value.trim();
+  const category = document.getElementById('edit-sched-cat').value;
+  const amount = document.getElementById('edit-sched-amount').value;
+  const frequency = document.getElementById('edit-sched-freq').value;
+  const next_due = document.getElementById('edit-sched-due').value;
+  if (!name) return toast('Enter a name','error');
+  if (!amount || parseFloat(amount) <= 0) return toast('Enter a valid amount','error');
+  if (!next_due) return toast('Set a due date','error');
+  const res = await apiFetch(`/api/schedules/${id}`, {method:'PATCH',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({name, category, amount: parseFloat(amount), frequency, next_due})});
+  if (res && res.ok) { loadSchedulesSettings(); toast('Schedule updated ✓','success'); }
+}
 }
 
 async function addSchedule() {
