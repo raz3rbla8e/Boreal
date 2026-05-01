@@ -101,7 +101,7 @@ def api_update(tid):
         save_undo(db, "update", {"id": tid, "old": dict(original)})
     db.execute(f"UPDATE transactions SET {sets} WHERE id=?", vals)
     retro_fixed = 0
-    if "category" in d and original:
+    if "category" in d and original and d["category"] != original["category"]:
         new_cat = d["category"]
         orig_name = original["name"].lower().strip()
         db.execute("""INSERT INTO learned_merchants (keyword, category) VALUES (?,?)

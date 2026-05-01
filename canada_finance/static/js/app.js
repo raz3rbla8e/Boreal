@@ -1116,14 +1116,22 @@ async function submitEdit() {
   if (!data) return;
   if (data.ok) {
     const extra = data.retro_fixed>0 ? ` · fixed ${data.retro_fixed} other${data.retro_fixed>1?'s':''}` : '';
-    toast(`Saved ✓${extra}`,'success'); closeModal('edit-modal'); renderMonth(); loadTransactions();
+    toast(`Saved ✓${extra}`,'success'); closeModal('edit-modal');
+    months = await apiFetch('/api/months') || [];
+    const editedMonth = body.date.slice(0,7);
+    const mi = months.indexOf(editedMonth);
+    currentMonthIdx = mi >= 0 ? mi : Math.max(0, Math.min(months.length-1, currentMonthIdx));
+    renderMonth(); loadTransactions();
   } else toast(data.error||'Error','error');
 }
 
 async function deleteFromEdit() {
   if (!confirm('Delete this transaction?')) return;
   await apiFetch(`/api/delete/${document.getElementById('e-id').value}`, {method:'DELETE'});
-  toast('Deleted','success'); showUndoButton(); closeModal('edit-modal'); renderMonth(); loadTransactions();
+  toast('Deleted','success'); showUndoButton(); closeModal('edit-modal');
+  months = await apiFetch('/api/months') || [];
+  currentMonthIdx = Math.max(0, Math.min(months.length-1, currentMonthIdx));
+  renderMonth(); loadTransactions();
 }
 
 // ── IMPORT ────────────────────────────────────────────────────────────────────
